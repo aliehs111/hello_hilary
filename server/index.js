@@ -1,5 +1,5 @@
 "use strict";
-
+const db = require("./db");
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -23,8 +23,14 @@ app.use(express.json({ limit: "25mb" }));
 app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 
 // Health check (no DB dependency so it always answers)
-app.get("/health", (req, res) => {
-  res.json({ status: "ok" });
+app.get("/health", async (req, res) => {
+  try {
+    await db.query("SELECT 1");
+    res.json({ status: "ok", db: "ok" });
+  } catch (e) {
+    console.error("[health db] error:", e);
+    res.status(500).json({ status: "error", db: "error" });
+  }
 });
 
 // API routes BEFORE SPA catch-all
