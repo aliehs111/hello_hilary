@@ -1,9 +1,6 @@
 {
   "name": "hellohilary",
   "private": true,
-  "engines": {
-    "node": "20.x"
-  },
   "scripts": {
     "build": "cd client && npm install && npm run build && cd ../server && npm install",
     "start": "cd server && npm start"
