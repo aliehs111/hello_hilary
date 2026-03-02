@@ -1,15 +1,11 @@
 {
   "name": "hellohilary",
   "private": true,
-  "workspaces": [
-    "client",
-    "server"
-  ],
   "engines": {
     "node": "20.x"
   },
   "scripts": {
-    "build": "npm --prefix client install --include=dev && npm --prefix client run build && npm --prefix server install",
-    "start": "npm --prefix server start"
+    "build": "cd client && npm install && npm run build && cd ../server && npm install",
+    "start": "cd server && npm start"
   }
 }
