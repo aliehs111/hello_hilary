@@ -15,10 +15,10 @@ export default function SignIn() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/login-with-code", {
+      const res = await fetch("http://localhost:5001/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), secretCode }),
+        body: JSON.stringify({ email: email.trim(), code: secretCode }),
       });
 
       const data = await res.json();

@@ -4,7 +4,8 @@ import { useState } from "react";
 export default function Upload() {
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState("");
-  const [message, setMessage] = useState("");
+  const [note, setNote] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
   const [status, setStatus] = useState(""); // 'success', 'error', or ''
   const [loading, setLoading] = useState(false);
 
@@ -17,13 +18,13 @@ export default function Upload() {
         !selectedFile.type.startsWith("video/")
       ) {
         setStatus("error");
-        setMessage("Please select a photo or video file.");
+        setStatusMessage("Please select a photo or video file.");
         setFile(null);
         return;
       }
       setFile(selectedFile);
       setStatus("");
-      setMessage("");
+      setStatusMessage("");
     }
   };
 
@@ -31,41 +32,40 @@ export default function Upload() {
     e.preventDefault();
     if (!file) {
       setStatus("error");
-      setMessage("Please choose a file to upload.");
+      setStatusMessage("Please choose a file to upload.");
       return;
     }
 
     setLoading(true);
     setStatus("");
-    setMessage("");
+    setStatusMessage("");
 
     const formData = new FormData();
     formData.append("file", file);
     formData.append("title", title);
-    formData.append("message", message);
+    formData.append("message", note);
 
     try {
       const res = await fetch("/api/upload", {
         method: "POST",
-        body: formData, // no Content-Type header — browser sets multipart/form-data
+        body: formData,
       });
 
       const data = await res.json();
 
       if (res.ok) {
         setStatus("success");
-        setMessage("Upload successful! Thank you 💕");
-        // Reset form
+        setStatusMessage("Upload successful! Thank you 💕");
         setFile(null);
         setTitle("");
-        setMessage("");
+        setNote("");
       } else {
         setStatus("error");
-        setMessage(data.error || "Upload failed. Please try again.");
+        setStatusMessage(data.error || "Upload failed. Please try again.");
       }
     } catch (err) {
       setStatus("error");
-      setMessage("Network error — please check your connection.");
+      setStatusMessage("Network error — please check your connection.");
     } finally {
       setLoading(false);
     }
@@ -100,8 +100,8 @@ export default function Upload() {
               Message / Note (optional)
             </label>
             <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
               rows={3}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
               placeholder="A short note about this hello..."
@@ -140,13 +140,13 @@ export default function Upload() {
 
         {status === "success" && (
           <div className="mt-6 p-4 bg-green-100 border border-green-300 text-green-800 rounded-lg text-center">
-            {message}
+            {statusMessage}
           </div>
         )}
 
         {status === "error" && (
           <div className="mt-6 p-4 bg-red-100 border border-red-300 text-red-800 rounded-lg text-center">
-            {message}
+            {statusMessage}
           </div>
         )}
       </div>

@@ -1,48 +1,56 @@
-// routes/media.js
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
 
-// GET /api/media - Fetch all media (photos + videos) for gallery
+// GET /api/media
+// Optional query params: uploader, type, q
 router.get("/", async (req, res) => {
   try {
-    const result = await db.query(
-      "SELECT id, s3_key, media_type, mime_type, title, message, created_at FROM media ORDER BY created_at DESC",
-    );
+    const { uploader, type, q } = req.query;
+
+    let query = `
+      SELECT m.id,
+             m.user_id,
+             u.display_name,
+             m.type,
+             m.title,
+             m.message,
+             m.storage_key,
+             m.content_type,
+             m.bytes,
+             m.created_at
+      FROM media m
+      JOIN users u ON m.user_id = u.id
+      WHERE 1=1
+    `;
+
+    const values = [];
+    let idx = 1;
+
+    if (uploader) {
+      query += ` AND m.user_id = $${idx++}`;
+      values.push(uploader);
+    }
+
+    if (type) {
+      query += ` AND m.type = $${idx++}`;
+      values.push(type);
+    }
+
+    if (q) {
+      query += ` AND (m.title ILIKE $${idx} OR m.message ILIKE $${idx})`;
+      values.push(`%${q}%`);
+      idx++;
+    }
+
+    query += ` ORDER BY m.created_at DESC`;
+
+    const result = await db.query(query, values);
     res.json(result.rows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to fetch media" });
   }
-});
-
-// GET /api/media/photos - Just photos
-router.get("/photos", async (req, res) => {
-  try {
-    const result = await db.query(
-      "SELECT * FROM media WHERE media_type = 'photo' ORDER BY created_at DESC",
-    );
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch photos" });
-  }
-});
-
-// GET /api/media/videos - Just videos
-router.get("/videos", async (req, res) => {
-  try {
-    const result = await db.query(
-      "SELECT * FROM media WHERE media_type = 'video' ORDER BY created_at DESC",
-    );
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch videos" });
-  }
-});
-
-// Placeholder for upload (we'll expand this next)
-router.post("/upload", (req, res) => {
-  res.status(501).json({ message: "Upload endpoint coming soon" });
 });
 
 module.exports = router;

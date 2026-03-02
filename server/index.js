@@ -2,26 +2,40 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+
+const authRoutes = require("./routes/auth");
 const mediaRoutes = require("./routes/media");
+const db = require("./db");
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Middleware
-app.use(cors()); // Allow frontend (localhost:5173) to connect
-app.use(express.json()); // Parse JSON bodies
+app.use(cors());
+app.use(express.json());
 
-// Routes
+// Seed the user on startup
+const seedUser = async () => {
+  try {
+    await db.query(
+      "INSERT INTO users (email, display_name, role) VALUES ($1, $2, $3) ON CONFLICT (email) DO NOTHING",
+      ["sheila@hello-hilary.com", "Sheila", "admin"],
+    );
+    console.log("User seeded successfully");
+  } catch (err) {
+    console.error("Error seeding user:", err);
+  }
+};
+
+seedUser();
+
 app.use("/api/media", mediaRoutes);
-
-// Health check
+app.use("/api/auth", authRoutes);
 app.get("/health", (req, res) => {
   res.json({ status: "ok", message: "Server is running" });
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
