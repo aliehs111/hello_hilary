@@ -1,6 +1,6 @@
 // src/pages/Hilary.jsx
 import { Link } from "react-router-dom";
-import HilaryMainPhoto from "../assets/Hilpeach.jpg";
+import HilaryMainPhoto from "../assets/HilPeach.jpg";
 
 export default function Hilary() {
   return (
