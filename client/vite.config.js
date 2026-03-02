@@ -1,13 +1,27 @@
-// vite.config.js
+// client/vite.config.js
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import path from "path"; // ← add this import
+import path from "path";
+import { fileURLToPath } from "url";
+
+// Needed because this config file runs in Node (ESM)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"), // ← this creates @ → src/
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  server: {
+    proxy: {
+      // so client can call fetch("/api/...") in dev
+      "/api": {
+        target: "http://localhost:5001",
+        changeOrigin: true,
+      },
     },
   },
 });
