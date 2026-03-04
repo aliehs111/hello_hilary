@@ -3,11 +3,13 @@ const router = express.Router();
 const db = require("../db");
 
 router.post("/login", async (req, res) => {
-  const { email, code } = req.body;
+  let { email, code } = req.body;
 
   if (!email || !code) {
     return res.status(400).json({ error: "Email and code required" });
   }
+
+  email = String(email).trim().toLowerCase();
 
   if (code !== process.env.UPLOAD_CODE) {
     return res.status(401).json({ error: "Invalid code" });
@@ -25,6 +27,7 @@ router.post("/login", async (req, res) => {
 
     res.json(result.rows[0]);
   } catch (err) {
+    console.error("[login] error:", err);
     res.status(500).json({ error: "Login failed" });
   }
 });

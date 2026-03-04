@@ -1,28 +1,41 @@
 "use strict";
-const db = require("./db");
+
 const express = require("express");
 const cors = require("cors");
-const dotenv = require("dotenv");
 const path = require("path");
+const dotenv = require("dotenv");
 
+// Load env FIRST (important if any required modules read process.env on import)
+dotenv.config();
+
+const db = require("./db");
+
+// Routes (loaded after dotenv so they can safely read env vars)
+const s3Routes = require("./routes/s3");
 const authRoutes = require("./routes/auth");
 const mediaRoutes = require("./routes/media");
-
-dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5001;
 
+// CORS
 app.use(
   cors({
     origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : true,
     credentials: true,
   }),
 );
+
+// Body parsing
 app.use(express.json({ limit: "25mb" }));
 app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 
-// Health check (no DB dependency so it always answers)
+// Lightweight health check (NO DB) — good for container/platform probes
+app.get("/ready", (req, res) => {
+  res.json({ status: "ok" });
+});
+
+// DB health check (verifies DB connectivity)
 app.get("/health", async (req, res) => {
   try {
     await db.query("SELECT 1");
@@ -34,6 +47,7 @@ app.get("/health", async (req, res) => {
 });
 
 // API routes BEFORE SPA catch-all
+app.use("/api/s3", s3Routes);
 app.use("/api/auth", authRoutes);
 app.use("/api/media", mediaRoutes);
 

@@ -1,18 +1,24 @@
 // src/pages/Upload.jsx
-import { useState } from "react";
+import { useMemo, useState } from "react";
+
+function getKindFromFile(file) {
+  return file.type.startsWith("video/") ? "video" : "photo";
+}
 
 export default function Upload() {
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState("");
-  const [note, setNote] = useState("");
+  const [note, setNote] = useState(""); // maps to caption
+  const [category, setCategory] = useState(""); // optional if you want it now
   const [statusMessage, setStatusMessage] = useState("");
   const [status, setStatus] = useState(""); // 'success', 'error', or ''
   const [loading, setLoading] = useState(false);
 
+  const fileKind = useMemo(() => (file ? getKindFromFile(file) : null), [file]);
+
   const handleFileChange = (e) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      // Optional: basic client-side type check
       if (
         !selectedFile.type.startsWith("image/") &&
         !selectedFile.type.startsWith("video/")
@@ -30,9 +36,25 @@ export default function Upload() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!file) {
       setStatus("error");
       setStatusMessage("Please choose a file to upload.");
+      return;
+    }
+
+    // You must have a logged-in user id for /api/media/complete
+    let userId = null;
+    try {
+      const stored = localStorage.getItem("user");
+      if (stored) userId = JSON.parse(stored)?.id;
+    } catch {
+      // ignore
+    }
+
+    if (!userId) {
+      setStatus("error");
+      setStatusMessage("Please log in again (missing user session).");
       return;
     }
 
@@ -40,32 +62,75 @@ export default function Upload() {
     setStatus("");
     setStatusMessage("");
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("title", title);
-    formData.append("message", note);
-
     try {
-      const res = await fetch("/api/upload", {
+      // 1) Ask server for a presigned S3 upload URL
+      const presignRes = await fetch("/api/s3/presign-upload", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: fileKind, // "photo" | "video"
+          contentType: file.type, // mime type
+          originalFilename: file.name, // optional metadata
+        }),
       });
 
-      const data = await res.json();
+      const presignData = await presignRes.json().catch(() => ({}));
 
-      if (res.ok) {
-        setStatus("success");
-        setStatusMessage("Upload successful! Thank you 💕");
-        setFile(null);
-        setTitle("");
-        setNote("");
-      } else {
-        setStatus("error");
-        setStatusMessage(data.error || "Upload failed. Please try again.");
+      if (!presignRes.ok) {
+        throw new Error(presignData?.error || "Failed to prepare upload.");
       }
+
+      const { uploadUrl, key } = presignData;
+      if (!uploadUrl || !key) {
+        throw new Error("Presign response missing uploadUrl/key.");
+      }
+
+      // 2) Upload directly to S3 (PUT)
+      const putRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!putRes.ok) {
+        throw new Error("S3 upload failed. Please try again.");
+      }
+
+      // 3) Tell backend upload is complete (write DB row)
+      const completeRes = await fetch("/api/media/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: userId,
+          media_type: fileKind,
+          original_key: key,
+          mime_type: file.type,
+          size_bytes: file.size,
+          title: title || null,
+          caption: note || null, // <-- matches your schema
+          category: category || null,
+          original_filename: file.name,
+        }),
+      });
+
+      const completeData = await completeRes.json().catch(() => ({}));
+
+      if (!completeRes.ok) {
+        throw new Error(
+          completeData?.error || "Upload saved but DB record failed.",
+        );
+      }
+
+      setStatus("success");
+      setStatusMessage("Upload successful! Thank you 💕");
+      setFile(null);
+      setTitle("");
+      setNote("");
+      setCategory("");
     } catch (err) {
+      console.error(err);
       setStatus("error");
-      setStatusMessage("Network error — please check your connection.");
+      setStatusMessage(err?.message || "Upload failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -105,6 +170,20 @@ export default function Upload() {
               rows={3}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
               placeholder="A short note about this hello..."
+            />
+          </div>
+
+          {/* Optional category field (safe to remove if you don’t want it yet) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Category (optional)
+            </label>
+            <input
+              type="text"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+              placeholder="birthday, family, dogs..."
             />
           </div>
 

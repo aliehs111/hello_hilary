@@ -18,19 +18,25 @@ export default function SignIn() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), code: secretCode }),
+        body: JSON.stringify({
+          email: email.trim(),
+          code: secretCode,
+        }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (res.ok) {
-        // Session is set via cookie from backend
-        navigate("/gallery"); // or '/upload' or home – your choice
+        // Backend returns the user object (no cookie session in your current auth)
+        localStorage.setItem("user", JSON.stringify(data));
+        navigate("/gallery"); // or '/upload'
       } else {
-        setError(data.message || "Invalid email or code. Please try again.");
+        setError(data.error || "Invalid email or code. Please try again.");
       }
     } catch (err) {
-      setError("Connection issue — please check your internet and try again.");
+      setError(
+        "Connection issue — please check your connection and try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -49,7 +55,6 @@ export default function SignIn() {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Email field */}
           <div>
             <label
               htmlFor="email"
@@ -68,7 +73,6 @@ export default function SignIn() {
             />
           </div>
 
-          {/* Secret code field */}
           <div>
             <label
               htmlFor="secretCode"
@@ -101,8 +105,8 @@ export default function SignIn() {
         )}
 
         <p className="mt-8 text-center text-sm text-gray-500">
-          First time? Just enter your email and the code — you'll be added
-          automatically if approved.
+          First time? You must be added to the invite list first. If you think
+          you were invited, double-check your email spelling.
         </p>
       </div>
     </div>
