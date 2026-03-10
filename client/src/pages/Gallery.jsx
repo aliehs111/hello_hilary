@@ -6,6 +6,8 @@ import "swiper/css";
 import "swiper/css/pagination";
 import "swiper/css/navigation";
 
+import VideoCard from "@/components/VideoCard";
+
 export default function Gallery() {
   const [media, setMedia] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -186,40 +188,11 @@ export default function Gallery() {
               {videos.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                   {videos.map((v) => (
-                    <div
+                    <VideoCard
                       key={v.id}
-                      className="bg-white rounded-2xl shadow-lg overflow-hidden p-5"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h3 className="text-xl font-semibold text-gray-900">
-                            {v.title || "Untitled Video"}
-                          </h3>
-                          {v.caption && (
-                            <p className="text-sm text-gray-600 mt-1">
-                              {v.caption}
-                            </p>
-                          )}
-                          <p className="text-xs text-gray-500 mt-2">
-                            From {v.display_name || "Someone"}
-                          </p>
-                        </div>
-                        <span className="text-xs font-bold px-3 py-1 rounded-full bg-pink-100 text-pink-700">
-                          {v.status}
-                        </span>
-                      </div>
-
-                      <div className="mt-4 text-xs text-gray-400 break-all">
-                        {v.original_key}
-                      </div>
-
-                      <button
-                        className="mt-5 w-full bg-pink-500 text-white text-lg font-semibold py-3 rounded-full shadow hover:bg-pink-600 transition"
-                        onClick={() => playVideo(v.original_key, v.title)}
-                      >
-                        Play
-                      </button>
-                    </div>
+                      video={v}
+                      onPlay={() => playVideo(v.original_key, v.title)}
+                    />
                   ))}
                 </div>
               ) : (
@@ -258,11 +231,26 @@ export default function Gallery() {
 
               <div className="bg-black">
                 <video
+                  key={playerUrl}
                   src={playerUrl}
                   controls
                   autoPlay
                   playsInline
                   className="w-full h-auto max-h-[75vh]"
+                  onLoadedMetadata={() => console.log("[video] loadedmetadata")}
+                  onCanPlay={() => console.log("[video] canplay")}
+                  onPlay={() => console.log("[video] play")}
+                  onError={(e) => {
+                    const v = e.currentTarget;
+                    console.log("[video] ERROR", {
+                      error: v?.error,
+                      code: v?.error?.code,
+                      message: v?.error?.message,
+                      networkState: v?.networkState,
+                      readyState: v?.readyState,
+                      currentSrc: v?.currentSrc,
+                    });
+                  }}
                 />
               </div>
             </div>
