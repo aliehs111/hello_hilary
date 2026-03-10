@@ -5,6 +5,12 @@ function getKindFromFile(file) {
   return file.type.startsWith("video/") ? "video" : "photo";
 }
 
+function getExtensionFromFile(file) {
+  const parts = file.name.split(".");
+  if (parts.length < 2) return "";
+  return parts.pop().toLowerCase();
+}
+
 export default function Upload() {
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState("");
@@ -43,7 +49,6 @@ export default function Upload() {
       return;
     }
 
-    // You must have a logged-in user id for /api/media/complete
     let userId = null;
     try {
       const stored = localStorage.getItem("user");
@@ -58,19 +63,21 @@ export default function Upload() {
       return;
     }
 
+    const fileExt = getExtensionFromFile(file);
+
     setLoading(true);
     setStatus("");
     setStatusMessage("");
 
     try {
-      // 1) Ask server for a presigned S3 upload URL
       const presignRes = await fetch("/api/s3/presign-upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          kind: fileKind, // "photo" | "video"
-          contentType: file.type, // mime type
-          originalFilename: file.name, // optional metadata
+          kind: fileKind,
+          contentType: file.type,
+          ext: fileExt,
+          originalFilename: file.name,
         }),
       });
 
@@ -85,7 +92,6 @@ export default function Upload() {
         throw new Error("Presign response missing uploadUrl/key.");
       }
 
-      // 2) Upload directly to S3 (PUT)
       const putRes = await fetch(uploadUrl, {
         method: "PUT",
         headers: { "Content-Type": file.type },
@@ -96,7 +102,6 @@ export default function Upload() {
         throw new Error("S3 upload failed. Please try again.");
       }
 
-      // 3) Tell backend upload is complete (write DB row)
       const completeRes = await fetch("/api/media/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -107,7 +112,7 @@ export default function Upload() {
           mime_type: file.type,
           size_bytes: file.size,
           title: title || null,
-          caption: note || null, // <-- matches your schema
+          caption: note || null,
           category: category || null,
           original_filename: file.name,
         }),
@@ -173,7 +178,6 @@ export default function Upload() {
             />
           </div>
 
-          {/* Optional category field (safe to remove if you don’t want it yet) */}
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Category (optional)

@@ -13,7 +13,7 @@ const db = require("../db");
 router.get("/", async (req, res) => {
   try {
     const { uploader, media_type, category, q } = req.query;
-    const status = req.query.status; // optional
+    const status = req.query.status;
 
     let query = `
       SELECT
@@ -48,7 +48,6 @@ router.get("/", async (req, res) => {
       query += ` AND m.status = $${idx++}`;
       values.push(status);
     } else {
-      // default: show items you’ll care about in the UI right now
       query += ` AND m.status IN ('uploaded','processing','ready')`;
     }
 
@@ -74,6 +73,7 @@ router.get("/", async (req, res) => {
     }
 
     query += ` ORDER BY m.created_at DESC LIMIT 200`;
+    // query += ` ORDER BY m.created_at DESC LIMIT 1`;
 
     const result = await db.query(query, values);
     res.json({ media: result.rows });
@@ -98,16 +98,23 @@ router.post("/complete", async (req, res) => {
       original_filename,
     } = req.body;
 
-    if (!user_id) return res.status(400).json({ error: "user_id required" });
+    if (!user_id) {
+      return res.status(400).json({ error: "user_id required" });
+    }
+
     if (media_type !== "photo" && media_type !== "video") {
       return res
         .status(400)
         .json({ error: "media_type must be 'photo' or 'video'" });
     }
-    if (!original_key)
+
+    if (!original_key) {
       return res.status(400).json({ error: "original_key required" });
-    if (!mime_type)
+    }
+
+    if (!mime_type) {
       return res.status(400).json({ error: "mime_type required" });
+    }
 
     const bytes = size_bytes == null ? null : Number(size_bytes);
     if (bytes != null && (!Number.isFinite(bytes) || bytes <= 0)) {
@@ -115,6 +122,8 @@ router.post("/complete", async (req, res) => {
         .status(400)
         .json({ error: "size_bytes must be a positive number (or omit it)" });
     }
+
+    const initialStatus = media_type === "photo" ? "ready" : "processing";
 
     const insert = `
       INSERT INTO media (
@@ -134,13 +143,14 @@ router.post("/complete", async (req, res) => {
         size_bytes,
         error_message
       )
-      VALUES ($1,$2,'uploaded',$3,NULL,NULL,$4,$5,$6,false,false,$7,$8,$9,NULL)
+      VALUES ($1,$2,$3,$4,NULL,NULL,$5,$6,$7,false,false,$8,$9,$10,NULL)
       RETURNING *
     `;
 
     const values = [
       user_id,
       media_type,
+      initialStatus,
       original_key,
       title ?? null,
       caption ?? null,
@@ -155,6 +165,72 @@ router.post("/complete", async (req, res) => {
   } catch (err) {
     console.error("[POST /api/media/complete] error:", err);
     res.status(500).json({ error: "Failed to complete media upload" });
+  }
+});
+
+// POST /api/media/:id/processed
+router.post("/:id/processed", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { playback_key, thumbnail_key } = req.body;
+
+    if (!playback_key) {
+      return res.status(400).json({ error: "playback_key required" });
+    }
+
+    const result = await db.query(
+      `
+      UPDATE media
+      SET
+        playback_key = $1,
+        thumbnail_key = $2,
+        status = 'ready',
+        error_message = NULL,
+        updated_at = now()
+      WHERE id = $3
+      RETURNING *
+      `,
+      [playback_key, thumbnail_key ?? null, id],
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Media not found" });
+    }
+
+    res.json({ media: result.rows[0] });
+  } catch (err) {
+    console.error("[POST /api/media/:id/processed] error:", err);
+    res.status(500).json({ error: "Failed to mark media processed" });
+  }
+});
+
+// POST /api/media/:id/failed
+router.post("/:id/failed", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error_message } = req.body;
+
+    const result = await db.query(
+      `
+      UPDATE media
+      SET
+        status = 'failed',
+        error_message = $1,
+        updated_at = now()
+      WHERE id = $2
+      RETURNING *
+      `,
+      [error_message ?? "Processing failed", id],
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Media not found" });
+    }
+
+    res.json({ media: result.rows[0] });
+  } catch (err) {
+    console.error("[POST /api/media/:id/failed] error:", err);
+    res.status(500).json({ error: "Failed to mark media failed" });
   }
 });
 

@@ -24,7 +24,6 @@ export default function VideoCard({ video, onPlay }) {
         </span>
       </div>
 
-      {/* thumbnail placeholder (for now) */}
       <div className="mt-4 rounded-xl overflow-hidden bg-gradient-to-br from-pink-200 to-blue-200 aspect-video flex items-center justify-center">
         <div className="text-white/90 font-semibold">Video</div>
       </div>

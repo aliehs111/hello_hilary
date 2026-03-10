@@ -13,23 +13,52 @@ export default function Gallery() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  // ✅ Modal player state (MUST be inside component)
+  const [photoUrls, setPhotoUrls] = useState({});
+  const [photoLoadFailed, setPhotoLoadFailed] = useState({});
   const [playerOpen, setPlayerOpen] = useState(false);
   const [playerUrl, setPlayerUrl] = useState("");
   const [playerTitle, setPlayerTitle] = useState("");
 
-  // Load media list
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       setLoading(true);
       setErr("");
+
       try {
         const res = await fetch("/api/media");
         const data = await res.json().catch(() => ({}));
+
         if (!res.ok) throw new Error(data?.error || "Failed to load media");
-        if (!cancelled) setMedia(data.media || []);
+
+        const mediaItems = data.media || [];
+        if (!cancelled) setMedia(mediaItems);
+
+        const photosOnly = mediaItems.filter((m) => m.media_type === "photo");
+
+        const entries = await Promise.all(
+          photosOnly.map(async (p) => {
+            try {
+              const urlRes = await fetch(
+                `/api/s3/presign-download?key=${encodeURIComponent(p.original_key)}`,
+              );
+              const urlData = await urlRes.json().catch(() => ({}));
+
+              if (!urlRes.ok || !urlData?.url) {
+                return [p.id, null];
+              }
+
+              return [p.id, urlData.url];
+            } catch {
+              return [p.id, null];
+            }
+          }),
+        );
+
+        if (!cancelled) {
+          setPhotoUrls(Object.fromEntries(entries));
+        }
       } catch (e) {
         if (!cancelled) setErr(e.message || "Failed to load media");
       } finally {
@@ -38,6 +67,7 @@ export default function Gallery() {
     }
 
     load();
+
     return () => {
       cancelled = true;
     };
@@ -47,6 +77,7 @@ export default function Gallery() {
     () => media.filter((m) => m.media_type === "photo"),
     [media],
   );
+
   const videos = useMemo(
     () => media.filter((m) => m.media_type === "video"),
     [media],
@@ -58,7 +89,6 @@ export default function Gallery() {
     setPlayerTitle("");
   };
 
-  // Close modal on ESC
   useEffect(() => {
     if (!playerOpen) return;
 
@@ -68,7 +98,6 @@ export default function Gallery() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playerOpen]);
 
   const playVideo = async (key, title) => {
@@ -110,7 +139,6 @@ export default function Gallery() {
 
         {!loading && !err && (
           <>
-            {/* Photos */}
             <section className="mb-12">
               <h2 className="text-3xl md:text-4xl font-bold text-pink-700 mb-6 text-center">
                 Recent Photos
@@ -144,20 +172,57 @@ export default function Gallery() {
                     {photos.map((p) => (
                       <SwiperSlide key={p.id}>
                         <div className="relative h-full w-full">
-                          {/* placeholder until you add presigned photo viewing */}
-                          <div className="absolute inset-0 bg-gradient-to-br from-pink-200 to-blue-200 flex items-center justify-center">
-                            <div className="text-center px-6">
-                              <div className="text-white text-xl font-semibold drop-shadow">
-                                {p.title || "Photo"}
-                              </div>
-                              <div className="text-white/90 mt-2 drop-shadow">
-                                {p.caption || ""}
-                              </div>
-                              <div className="mt-4 inline-block text-xs font-bold px-3 py-1 rounded-full bg-white/80 text-pink-700">
-                                {p.status}
+                          {photoUrls[p.id] && !photoLoadFailed[p.id] ? (
+                            <img
+                              src={photoUrls[p.id]}
+                              alt={p.title || "Photo"}
+                              className="h-full w-full object-cover"
+                              onLoad={() => {
+                                console.log("[photo] loaded id:", p.id);
+                                console.log(
+                                  "[photo] loaded key:",
+                                  p.original_key,
+                                );
+                                console.log(
+                                  "[photo] loaded url:",
+                                  photoUrls[p.id],
+                                );
+                              }}
+                              onError={(e) => {
+                                console.log("[photo] ERROR id:", p.id);
+                                console.log(
+                                  "[photo] ERROR key:",
+                                  p.original_key,
+                                );
+                                console.log(
+                                  "[photo] ERROR url:",
+                                  photoUrls[p.id],
+                                );
+                                console.log(
+                                  "[photo] ERROR currentSrc:",
+                                  e.currentTarget.currentSrc,
+                                );
+                                setPhotoLoadFailed((prev) => ({
+                                  ...prev,
+                                  [p.id]: true,
+                                }));
+                              }}
+                            />
+                          ) : (
+                            <div className="absolute inset-0 bg-gradient-to-br from-pink-200 to-blue-200 flex items-center justify-center">
+                              <div className="text-center px-6">
+                                <div className="text-white text-xl font-semibold drop-shadow">
+                                  {p.title || "Photo"}
+                                </div>
+                                <div className="text-white/90 mt-2 drop-shadow">
+                                  {p.caption || ""}
+                                </div>
+                                <div className="mt-4 inline-block text-xs font-bold px-3 py-1 rounded-full bg-white/80 text-pink-700">
+                                  {p.status}
+                                </div>
                               </div>
                             </div>
-                          </div>
+                          )}
                         </div>
                       </SwiperSlide>
                     ))}
@@ -179,7 +244,6 @@ export default function Gallery() {
               )}
             </section>
 
-            {/* Videos */}
             <section>
               <h2 className="text-4xl md:text-5xl font-bold text-pink-800 mb-10 text-center">
                 Hello Videos
@@ -191,7 +255,9 @@ export default function Gallery() {
                     <VideoCard
                       key={v.id}
                       video={v}
-                      onPlay={() => playVideo(v.original_key, v.title)}
+                      onPlay={() =>
+                        playVideo(v.playback_key || v.original_key, v.title)
+                      }
                     />
                   ))}
                 </div>
@@ -206,7 +272,6 @@ export default function Gallery() {
           </>
         )}
 
-        {/* ✅ Modal player goes HERE (still inside max-w container) */}
         {playerOpen && (
           <div
             className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
@@ -237,9 +302,6 @@ export default function Gallery() {
                   autoPlay
                   playsInline
                   className="w-full h-auto max-h-[75vh]"
-                  onLoadedMetadata={() => console.log("[video] loadedmetadata")}
-                  onCanPlay={() => console.log("[video] canplay")}
-                  onPlay={() => console.log("[video] play")}
                   onError={(e) => {
                     const v = e.currentTarget;
                     console.log("[video] ERROR", {
@@ -256,7 +318,6 @@ export default function Gallery() {
             </div>
           </div>
         )}
-        {/* ✅ End modal */}
       </div>
     </div>
   );
