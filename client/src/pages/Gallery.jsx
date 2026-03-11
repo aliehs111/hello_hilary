@@ -18,6 +18,7 @@ export default function Gallery() {
   const [playerOpen, setPlayerOpen] = useState(false);
   const [playerUrl, setPlayerUrl] = useState("");
   const [playerTitle, setPlayerTitle] = useState("");
+  const [videoThumbUrls, setVideoThumbUrls] = useState({});
 
   useEffect(() => {
     let cancelled = false;
@@ -36,8 +37,9 @@ export default function Gallery() {
         if (!cancelled) setMedia(mediaItems);
 
         const photosOnly = mediaItems.filter((m) => m.media_type === "photo");
+        const videosOnly = mediaItems.filter((m) => m.media_type === "video");
 
-        const entries = await Promise.all(
+        const photoEntries = await Promise.all(
           photosOnly.map(async (p) => {
             try {
               const urlRes = await fetch(
@@ -56,8 +58,30 @@ export default function Gallery() {
           }),
         );
 
+        const videoThumbEntries = await Promise.all(
+          videosOnly.map(async (v) => {
+            try {
+              if (!v.thumbnail_key) return [v.id, null];
+
+              const urlRes = await fetch(
+                `/api/s3/presign-download?key=${encodeURIComponent(v.thumbnail_key)}`,
+              );
+              const urlData = await urlRes.json().catch(() => ({}));
+
+              if (!urlRes.ok || !urlData?.url) {
+                return [v.id, null];
+              }
+
+              return [v.id, urlData.url];
+            } catch {
+              return [v.id, null];
+            }
+          }),
+        );
+
         if (!cancelled) {
-          setPhotoUrls(Object.fromEntries(entries));
+          setPhotoUrls(Object.fromEntries(photoEntries));
+          setVideoThumbUrls(Object.fromEntries(videoThumbEntries));
         }
       } catch (e) {
         if (!cancelled) setErr(e.message || "Failed to load media");
@@ -255,6 +279,7 @@ export default function Gallery() {
                     <VideoCard
                       key={v.id}
                       video={v}
+                      thumbnailUrl={videoThumbUrls[v.id]}
                       onPlay={() =>
                         playVideo(v.playback_key || v.original_key, v.title)
                       }

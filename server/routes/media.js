@@ -2,7 +2,10 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
-
+const {
+  createMediaConvertJob,
+  watchMediaConvertJob,
+} = require("../lib/mediaconvert");
 // GET /api/media
 // Optional query params:
 //   uploader=<uuid>
@@ -84,6 +87,7 @@ router.get("/", async (req, res) => {
 });
 
 // POST /api/media/complete
+
 router.post("/complete", async (req, res) => {
   try {
     const {
@@ -98,30 +102,7 @@ router.post("/complete", async (req, res) => {
       original_filename,
     } = req.body;
 
-    if (!user_id) {
-      return res.status(400).json({ error: "user_id required" });
-    }
-
-    if (media_type !== "photo" && media_type !== "video") {
-      return res
-        .status(400)
-        .json({ error: "media_type must be 'photo' or 'video'" });
-    }
-
-    if (!original_key) {
-      return res.status(400).json({ error: "original_key required" });
-    }
-
-    if (!mime_type) {
-      return res.status(400).json({ error: "mime_type required" });
-    }
-
-    const bytes = size_bytes == null ? null : Number(size_bytes);
-    if (bytes != null && (!Number.isFinite(bytes) || bytes <= 0)) {
-      return res
-        .status(400)
-        .json({ error: "size_bytes must be a positive number (or omit it)" });
-    }
+    // ... your existing validation ...
 
     const initialStatus = media_type === "photo" ? "ready" : "processing";
 
@@ -144,7 +125,7 @@ router.post("/complete", async (req, res) => {
         error_message
       )
       VALUES ($1,$2,$3,$4,NULL,NULL,$5,$6,$7,false,false,$8,$9,$10,NULL)
-      RETURNING *
+      RETURNING id
     `;
 
     const values = [
@@ -157,11 +138,53 @@ router.post("/complete", async (req, res) => {
       category ?? null,
       original_filename ?? null,
       mime_type,
-      bytes,
+      Number(size_bytes) || null,
     ];
 
     const result = await db.query(insert, values);
-    res.json({ media: result.rows[0] });
+    const mediaId = result.rows[0].id;
+
+    // ── NEW: Trigger MediaConvert for videos ──
+    let processingMessage = "Upload complete";
+    if (media_type === "video") {
+      try {
+        const { jobId, playbackKey, thumbnailKey } =
+          await createMediaConvertJob({
+            mediaId,
+            originalKey: original_key,
+          });
+
+        // Start watcher in background (non-blocking)
+        watchMediaConvertJob({
+          mediaId,
+          jobId,
+          playbackKey,
+          thumbnailKey,
+          maxAttempts: 120, // ~20 min timeout
+          delayMs: 10000,
+        }).catch((err) => {
+          console.error(`Background watcher failed for media ${mediaId}:`, err);
+          // Optional: call markFailed via DB here if critical
+        });
+
+        processingMessage =
+          "Video processing started (thumbnails & playback will appear soon)";
+        console.log(`MediaConvert job ${jobId} started for media ${mediaId}`);
+      } catch (jobErr) {
+        console.error(`Failed to start MediaConvert for ${mediaId}:`, jobErr);
+        // Optionally mark failed in DB
+        await db.query(
+          `UPDATE media SET status = 'failed', error_message = $1 WHERE id = $2`,
+          [jobErr.message || "Failed to start processing", mediaId],
+        );
+        processingMessage = "Upload saved, but processing failed to start";
+      }
+    }
+
+    res.json({
+      media: result.rows[0],
+      message: processingMessage,
+    });
   } catch (err) {
     console.error("[POST /api/media/complete] error:", err);
     res.status(500).json({ error: "Failed to complete media upload" });

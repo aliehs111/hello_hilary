@@ -1,5 +1,5 @@
-// src/components/VideoCard.jsx
-export default function VideoCard({ video, onPlay }) {
+// client/src/components/VideoCard.jsx
+export default function VideoCard({ video, thumbnailUrl, onPlay }) {
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden p-5">
       <div className="flex items-start justify-between gap-3">
@@ -25,7 +25,15 @@ export default function VideoCard({ video, onPlay }) {
       </div>
 
       <div className="mt-4 rounded-xl overflow-hidden bg-gradient-to-br from-pink-200 to-blue-200 aspect-video flex items-center justify-center">
-        <div className="text-white/90 font-semibold">Video</div>
+        {thumbnailUrl ? (
+          <img
+            src={thumbnailUrl}
+            alt={video.title || "Video thumbnail"}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="text-white/90 font-semibold">Video</div>
+        )}
       </div>
 
       <button
