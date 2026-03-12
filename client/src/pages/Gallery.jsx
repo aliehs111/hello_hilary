@@ -7,6 +7,7 @@ import "swiper/css/pagination";
 import "swiper/css/navigation";
 
 import VideoCard from "@/components/VideoCard";
+import FilterPanel from "@/components/FilterPanel";
 
 export default function Gallery() {
   const [media, setMedia] = useState([]);
@@ -15,10 +16,18 @@ export default function Gallery() {
 
   const [photoUrls, setPhotoUrls] = useState({});
   const [photoLoadFailed, setPhotoLoadFailed] = useState({});
+  const [videoThumbUrls, setVideoThumbUrls] = useState({});
+
   const [playerOpen, setPlayerOpen] = useState(false);
   const [playerUrl, setPlayerUrl] = useState("");
   const [playerTitle, setPlayerTitle] = useState("");
-  const [videoThumbUrls, setVideoThumbUrls] = useState({});
+
+  const [duration, setDuration] = useState(30);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [uploader, setUploader] = useState("all");
+  const [dateRange, setDateRange] = useState("any");
 
   useEffect(() => {
     let cancelled = false;
@@ -47,10 +56,7 @@ export default function Gallery() {
               );
               const urlData = await urlRes.json().catch(() => ({}));
 
-              if (!urlRes.ok || !urlData?.url) {
-                return [p.id, null];
-              }
-
+              if (!urlRes.ok || !urlData?.url) return [p.id, null];
               return [p.id, urlData.url];
             } catch {
               return [p.id, null];
@@ -68,10 +74,7 @@ export default function Gallery() {
               );
               const urlData = await urlRes.json().catch(() => ({}));
 
-              if (!urlRes.ok || !urlData?.url) {
-                return [v.id, null];
-              }
-
+              if (!urlRes.ok || !urlData?.url) return [v.id, null];
               return [v.id, urlData.url];
             } catch {
               return [v.id, null];
@@ -106,6 +109,28 @@ export default function Gallery() {
     () => media.filter((m) => m.media_type === "video"),
     [media],
   );
+
+  const uploaderOptions = useMemo(() => {
+    const names = Array.from(
+      new Set(videos.map((v) => (v.display_name || "").trim()).filter(Boolean)),
+    ).sort((a, b) => a.localeCompare(b));
+
+    return ["all", ...names];
+  }, [videos]);
+
+  const toggleCategory = (category) => {
+    setSelectedCategories((prev) =>
+      prev.includes(category)
+        ? prev.filter((c) => c !== category)
+        : [...prev, category],
+    );
+  };
+
+  const clearFilters = () => {
+    setSelectedCategories([]);
+    setUploader("all");
+    setDateRange("any");
+  };
 
   const closePlayer = () => {
     setPlayerOpen(false);
@@ -142,56 +167,101 @@ export default function Gallery() {
     }
   };
 
+  const handlePlayAll = () => {
+    console.log("Play all videos", {
+      duration,
+      categories: selectedCategories,
+      uploader,
+      dateRange,
+    });
+  };
+
+  const activeFilterCount =
+    selectedCategories.length +
+    (uploader !== "all" ? 1 : 0) +
+    (dateRange !== "any" ? 1 : 0);
+
   return (
     <div className="min-h-screen pt-20 px-6 pb-16 bg-gradient-to-b from-pink-50 to-blue-50">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl md:text-5xl font-bold text-pink-800 mb-10 text-center">
-          Hello Hilary Gallery 💕
-        </h1>
+        <section className="mb-8">
+          <div className="text-center">
+            <h1 className="text-5xl md:text-6xl font-bold text-pink-700">
+              Hello Hilary 💕
+            </h1>
+          </div>
+        </section>
 
         {loading && (
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-10 text-center shadow-lg">
+          <div className="bg-white/75 backdrop-blur-sm rounded-3xl p-10 text-center shadow-lg">
             <p className="text-xl text-gray-600">Loading…</p>
           </div>
         )}
 
         {!loading && err && (
-          <div className="bg-red-100 border border-red-300 text-red-800 rounded-2xl p-6 text-center shadow-lg">
+          <div className="bg-red-100 border border-red-300 text-red-800 rounded-3xl p-6 text-center shadow-lg">
             {err}
           </div>
         )}
 
         {!loading && !err && (
           <>
-            <section className="mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-pink-700 mb-6 text-center">
-                Recent Photos
+            <section className="mb-10">
+              <div className="text-center">
+                <div className="flex flex-col sm:flex-row justify-center gap-4">
+                  <button
+                    onClick={handlePlayAll}
+                    className="bg-gradient-to-r from-pink-500 to-rose-500 text-white text-2xl md:text-3xl font-bold px-10 md:px-14 py-5 md:py-6 rounded-full shadow-xl hover:scale-[1.02] transition"
+                  >
+                    ▶ Play All Videos
+                  </button>
+
+                  <button
+                    onClick={() => setFiltersOpen(true)}
+                    className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-2xl md:text-3xl font-bold px-10 md:px-14 py-5 md:py-6 rounded-full shadow-xl hover:scale-[1.02] transition"
+                  >
+                    🔎 Choose Filters
+                  </button>
+                </div>
+
+                <div className="mt-4">
+                  <p className="mt-5 text-sm text-gray-500">
+                    Or choose a video below
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <section className="mb-16">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                {videos.map((v) => (
+                  <VideoCard
+                    key={v.id}
+                    video={v}
+                    thumbnailUrl={videoThumbUrls[v.id]}
+                    onPlay={() =>
+                      playVideo(v.playback_key || v.original_key, v.title)
+                    }
+                  />
+                ))}
+              </div>
+            </section>
+
+            <section>
+              <h2 className="text-3xl font-bold text-pink-700 text-center mb-6">
+                Photos
               </h2>
 
               {photos.length > 0 ? (
-                <div className="relative rounded-2xl overflow-hidden shadow-xl mx-auto max-w-4xl">
+                <div className="max-w-4xl mx-auto rounded-2xl overflow-hidden shadow-xl">
                   <Swiper
                     modules={[Pagination, Navigation, Autoplay]}
-                    spaceBetween={0}
                     slidesPerView={1}
-                    centeredSlides
                     loop={photos.length > 1}
-                    autoplay={{
-                      delay: 7000,
-                      disableOnInteraction: false,
-                      pauseOnMouseEnter: true,
-                    }}
-                    pagination={{
-                      clickable: true,
-                      bulletClass:
-                        "swiper-pagination-bullet !bg-pink-400 !opacity-70",
-                      bulletActiveClass: "!bg-pink-600 !opacity-100",
-                    }}
-                    navigation={{
-                      nextEl: ".swiper-button-next",
-                      prevEl: ".swiper-button-prev",
-                    }}
-                    className="h-[200px] sm:h-[300px] md:h-[400px]"
+                    autoplay={{ delay: 7000, disableOnInteraction: false }}
+                    pagination={{ clickable: true }}
+                    navigation
+                    className="h-[250px] md:h-[400px]"
                   >
                     {photos.map((p) => (
                       <SwiperSlide key={p.id}>
@@ -200,36 +270,16 @@ export default function Gallery() {
                             <img
                               src={photoUrls[p.id]}
                               alt={p.title || "Photo"}
-                              className="h-full w-full object-cover"
-                              onLoad={() => {
-                                console.log("[photo] loaded id:", p.id);
-                                console.log(
-                                  "[photo] loaded key:",
-                                  p.original_key,
-                                );
-                                console.log(
-                                  "[photo] loaded url:",
-                                  photoUrls[p.id],
-                                );
-                              }}
+                              className="w-full h-full object-cover"
                               onError={(e) => {
-                                console.log("[photo] ERROR id:", p.id);
-                                console.log(
-                                  "[photo] ERROR key:",
-                                  p.original_key,
-                                );
-                                console.log(
-                                  "[photo] ERROR url:",
-                                  photoUrls[p.id],
-                                );
-                                console.log(
-                                  "[photo] ERROR currentSrc:",
-                                  e.currentTarget.currentSrc,
-                                );
                                 setPhotoLoadFailed((prev) => ({
                                   ...prev,
                                   [p.id]: true,
                                 }));
+                                console.log(
+                                  "[photo] ERROR currentSrc:",
+                                  e.currentTarget.currentSrc,
+                                );
                               }}
                             />
                           ) : (
@@ -241,9 +291,6 @@ export default function Gallery() {
                                 <div className="text-white/90 mt-2 drop-shadow">
                                   {p.caption || ""}
                                 </div>
-                                <div className="mt-4 inline-block text-xs font-bold px-3 py-1 rounded-full bg-white/80 text-pink-700">
-                                  {p.status}
-                                </div>
                               </div>
                             </div>
                           )}
@@ -251,94 +298,46 @@ export default function Gallery() {
                       </SwiperSlide>
                     ))}
                   </Swiper>
-
-                  <button className="swiper-button-prev absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm rounded-full p-5 text-pink-600 hover:bg-white hover:text-pink-800 shadow-lg transition">
-                    ←
-                  </button>
-                  <button className="swiper-button-next absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm rounded-full p-5 text-pink-600 hover:bg-white hover:text-pink-800 shadow-lg transition">
-                    →
-                  </button>
                 </div>
               ) : (
-                <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-12 text-center shadow-lg">
-                  <p className="text-xl text-gray-600">
-                    No photos yet — upload one to brighten Hilary&apos;s day! 📸
-                  </p>
-                </div>
-              )}
-            </section>
-
-            <section>
-              <h2 className="text-4xl md:text-5xl font-bold text-pink-800 mb-10 text-center">
-                Hello Videos
-              </h2>
-
-              {videos.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                  {videos.map((v) => (
-                    <VideoCard
-                      key={v.id}
-                      video={v}
-                      thumbnailUrl={videoThumbUrls[v.id]}
-                      onPlay={() =>
-                        playVideo(v.playback_key || v.original_key, v.title)
-                      }
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-12 text-center shadow-lg">
-                  <p className="text-xl text-gray-600">
-                    No videos yet — be the first to say hello! 🎥
-                  </p>
+                <div className="bg-white/75 backdrop-blur-sm rounded-3xl p-12 text-center shadow-lg">
+                  <p className="text-xl text-gray-600">No photos yet 📸</p>
                 </div>
               )}
             </section>
           </>
         )}
 
+        <FilterPanel
+          isOpen={filtersOpen}
+          onClose={() => setFiltersOpen(false)}
+          selectedCategories={selectedCategories}
+          onToggleCategory={toggleCategory}
+          uploader={uploader}
+          onChangeUploader={setUploader}
+          uploaderOptions={uploaderOptions}
+          dateRange={dateRange}
+          onChangeDateRange={setDateRange}
+          onClear={clearFilters}
+        />
+
         {playerOpen && (
           <div
-            className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
             onClick={closePlayer}
           >
             <div
-              className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden"
+              className="bg-white rounded-xl overflow-hidden max-w-4xl w-full"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between px-5 py-4 border-b">
-                <div className="font-semibold text-gray-900 truncate">
-                  {playerTitle}
-                </div>
-                <button
-                  className="text-gray-600 hover:text-gray-900 text-2xl leading-none"
-                  onClick={closePlayer}
-                  aria-label="Close"
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="bg-black">
-                <video
-                  key={playerUrl}
-                  src={playerUrl}
-                  controls
-                  autoPlay
-                  playsInline
-                  className="w-full h-auto max-h-[75vh] object-contain"
-                  onError={(e) => {
-                    console.log("[video] ERROR", {
-                      error: e.currentTarget.error,
-                      code: e.currentTarget.error?.code,
-                      message: e.currentTarget.error?.message,
-                      networkState: e.currentTarget.networkState,
-                      readyState: e.currentTarget.readyState,
-                      currentSrc: e.currentTarget.currentSrc,
-                    });
-                  }}
-                />
-              </div>
+              <video
+                key={playerUrl}
+                src={playerUrl}
+                controls
+                autoPlay
+                playsInline
+                className="w-full max-h-[80vh] bg-black object-contain"
+              />
             </div>
           </div>
         )}
