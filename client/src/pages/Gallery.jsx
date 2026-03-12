@@ -326,12 +326,7 @@ export default function Gallery() {
                   controls
                   autoPlay
                   playsInline
-                  className="w-full h-auto max-h-[75vh] object-contain" // changed to contain to avoid cropping after rotation
-                  style={{
-                    imageOrientation: "from-image", // respect embedded rotation metadata
-                    transform: "rotate(90deg)", // force 90° clockwise (most common for vertical iPhone videos)
-                    transformOrigin: "center center",
-                  }}
+                  className="w-full h-auto max-h-[75vh] object-contain"
                   onError={(e) => {
                     console.log("[video] ERROR", {
                       error: e.currentTarget.error,

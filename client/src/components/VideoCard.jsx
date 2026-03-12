@@ -3,9 +3,11 @@ import { useState } from "react";
 export default function VideoCard({ video, thumbnailUrl, onPlay }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
     setShowConfirm(false);
+    setIsDeleting(true);
 
     try {
       const res = await fetch(`/api/media/${video.id}`, {
@@ -17,10 +19,12 @@ export default function VideoCard({ video, thumbnailUrl, onPlay }) {
         throw new Error(errData.error || "Delete failed");
       }
 
-      setShowSuccess(true); // show success modal
+      setShowSuccess(true);
     } catch (err) {
-      alert("Delete failed"); // keep this simple for errors
+      alert("Delete failed: " + (err.message || "Unknown error"));
       console.error(err);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -43,7 +47,6 @@ export default function VideoCard({ video, thumbnailUrl, onPlay }) {
           </p>
         </div>
 
-        {/* Status tag + delete button grouped vertically on right */}
         <div className="flex flex-col items-end gap-2 shrink-0">
           <span className="text-xs font-bold px-3 py-1 rounded-full bg-pink-100 text-pink-700">
             {video.status}
@@ -51,10 +54,13 @@ export default function VideoCard({ video, thumbnailUrl, onPlay }) {
 
           <button
             onClick={() => setShowConfirm(true)}
-            className="bg-orange-500 hover:bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-lg shadow-md transition"
+            disabled={isDeleting}
+            className={`bg-orange-500 hover:bg-orange-600 text-white w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-md transition ${
+              isDeleting ? "opacity-50 cursor-not-allowed" : ""
+            }`}
             title="Delete this media"
           >
-            🗑
+            {isDeleting ? "⌛" : "🗑"}
           </button>
         </div>
       </div>
@@ -65,11 +71,6 @@ export default function VideoCard({ video, thumbnailUrl, onPlay }) {
             src={thumbnailUrl}
             alt={video.title || "Video thumbnail"}
             className="w-full h-full object-cover"
-            style={{
-              imageOrientation: "from-image",
-              transform: "rotate(90deg)", // adjust if needed
-              transformOrigin: "center",
-            }}
           />
         ) : (
           <div className="text-white/90 font-semibold">Video</div>
@@ -84,57 +85,62 @@ export default function VideoCard({ video, thumbnailUrl, onPlay }) {
         Play
       </button>
 
-      {/* Confirmation modal (Are you sure?) */}
       {showConfirm && (
         <div
-          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
           onClick={() => setShowConfirm(false)}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center"
+            className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center border border-gray-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-xl font-semibold text-gray-900 mb-3">
-              Delete this {video.media_type || "item"}?
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">
+              Delete this {video.media_type || "media"}?
             </h3>
-            <p className="text-gray-600 mb-6">This action cannot be undone.</p>
+            <p className="text-gray-600 text-lg mb-8">
+              This action cannot be undone.
+            </p>
 
-            <div className="flex gap-4 justify-center">
+            <div className="flex gap-6 justify-center">
               <button
                 onClick={() => setShowConfirm(false)}
-                className="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-full font-medium transition"
+                className="px-8 py-4 bg-gray-200 hover:bg-gray-300 text-gray-800 text-lg font-semibold rounded-2xl transition flex-1"
               >
                 Cancel
               </button>
 
               <button
                 onClick={handleDelete}
-                className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-full font-medium shadow transition"
+                disabled={isDeleting}
+                className={`px-8 py-4 bg-red-600 hover:bg-red-700 text-white text-lg font-semibold rounded-2xl shadow transition flex-1 ${
+                  isDeleting ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               >
-                Delete
+                {isDeleting ? "Deleting..." : "Delete"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Success modal (Deleted!) */}
       {showSuccess && (
         <div
-          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
           onClick={() => {
             setShowSuccess(false);
-            window.location.reload(); // refresh after closing
+            window.location.reload();
           }}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center"
+            className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center border border-green-200"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="text-6xl mb-4">✅</div>
-            <h3 className="text-2xl font-bold text-green-600 mb-3">Deleted!</h3>
-            <p className="text-gray-600 mb-6">
-              This {video.media_type || "item"} has been removed.
+            <h3 className="text-2xl font-bold text-green-700 mb-4">
+              Successfully Deleted
+            </h3>
+            <p className="text-gray-600 text-lg mb-8">
+              This {video.media_type || "media"} has been removed.
             </p>
 
             <button
@@ -142,7 +148,7 @@ export default function VideoCard({ video, thumbnailUrl, onPlay }) {
                 setShowSuccess(false);
                 window.location.reload();
               }}
-              className="px-8 py-4 bg-green-600 hover:bg-green-700 text-white text-lg font-medium rounded-full shadow transition w-full"
+              className="px-10 py-4 bg-green-600 hover:bg-green-700 text-white text-lg font-semibold rounded-2xl shadow transition w-full"
             >
               OK
             </button>

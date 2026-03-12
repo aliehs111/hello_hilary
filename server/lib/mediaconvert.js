@@ -1,3 +1,5 @@
+// server/lib/mediaconvert.js
+
 "use strict";
 
 const {
@@ -63,8 +65,9 @@ async function createMediaConvertJob({ mediaId, originalKey }) {
     .split("/")
     .pop()
     .replace(/\.[^/.]+$/, "");
+
   const playbackKey = `processed/video/${base}_mp4.mp4`;
-  const thumbnailKey = `processed/video/${base}_poster.0000000.jpg`; // adjust if S3 shows .00000001.jpg
+  const thumbnailKey = `processed/video/${base}_poster.0000000.jpg`;
 
   console.log(`[CREATE JOB] media ${mediaId} | input: ${inputS3}`);
   console.log(`  expected playback: ${playbackKey}`);
@@ -75,7 +78,7 @@ async function createMediaConvertJob({ mediaId, originalKey }) {
   const command = new CreateJobCommand({
     Role: roleArn,
     UserMetadata: {
-      mediaId,
+      mediaId: String(mediaId),
       originalKey,
     },
     Settings: {
@@ -87,7 +90,10 @@ async function createMediaConvertJob({ mediaId, originalKey }) {
               DefaultSelection: "DEFAULT",
             },
           },
-          VideoSelector: {},
+          VideoSelector: {
+            Rotate: "AUTO",
+          },
+          TimecodeSource: "ZEROBASED",
         },
       ],
       OutputGroups: [
@@ -225,7 +231,7 @@ async function watchMediaConvertJob({
 
         if (playbackExists && thumbExists) {
           await markProcessed(mediaId, playbackKey, thumbnailKey);
-          console.log(`[WATCHER] SUCCESS - both files exist`);
+          console.log("[WATCHER] SUCCESS - both files exist");
         } else {
           const msg = `COMPLETE but files missing (playback: ${playbackExists}, thumb: ${thumbExists})`;
           console.error(`[WATCHER] ${msg}`);
