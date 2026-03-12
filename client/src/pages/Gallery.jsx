@@ -326,16 +326,20 @@ export default function Gallery() {
                   controls
                   autoPlay
                   playsInline
-                  className="w-full h-auto max-h-[75vh]"
+                  className="w-full h-auto max-h-[75vh] object-contain" // changed to contain to avoid cropping after rotation
+                  style={{
+                    imageOrientation: "from-image", // respect embedded rotation metadata
+                    transform: "rotate(90deg)", // force 90° clockwise (most common for vertical iPhone videos)
+                    transformOrigin: "center center",
+                  }}
                   onError={(e) => {
-                    const v = e.currentTarget;
                     console.log("[video] ERROR", {
-                      error: v?.error,
-                      code: v?.error?.code,
-                      message: v?.error?.message,
-                      networkState: v?.networkState,
-                      readyState: v?.readyState,
-                      currentSrc: v?.currentSrc,
+                      error: e.currentTarget.error,
+                      code: e.currentTarget.error?.code,
+                      message: e.currentTarget.error?.message,
+                      networkState: e.currentTarget.networkState,
+                      readyState: e.currentTarget.readyState,
+                      currentSrc: e.currentTarget.currentSrc,
                     });
                   }}
                 />

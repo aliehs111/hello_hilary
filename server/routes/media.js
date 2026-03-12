@@ -6,13 +6,16 @@ const {
   createMediaConvertJob,
   watchMediaConvertJob,
 } = require("../lib/mediaconvert");
-// GET /api/media
-// Optional query params:
-//   uploader=<uuid>
-//   media_type=photo|video
-//   category=<string>
-//   status=uploaded|processing|ready|failed
-//   q=<search string> (searches title + caption)
+
+const { S3Client, DeleteObjectsCommand } = require("@aws-sdk/client-s3");
+
+const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
 router.get("/", async (req, res) => {
   try {
     const { uploader, media_type, category, q } = req.query;
@@ -254,6 +257,54 @@ router.post("/:id/failed", async (req, res) => {
   } catch (err) {
     console.error("[POST /api/media/:id/failed] error:", err);
     res.status(500).json({ error: "Failed to mark media failed" });
+  }
+});
+
+// DELETE /api/media/:id – no auth for now
+router.delete("/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Fetch media to get S3 keys
+    const mediaRes = await db.query(
+      `
+      SELECT original_key, playback_key, thumbnail_key
+      FROM media
+      WHERE id = $1
+      `,
+      [id],
+    );
+
+    if (mediaRes.rows.length === 0) {
+      return res.status(404).json({ error: "Media not found" });
+    }
+
+    const media = mediaRes.rows[0];
+
+    // Delete S3 files if they exist
+    const keys = [
+      media.original_key,
+      media.playback_key,
+      media.thumbnail_key,
+    ].filter(Boolean);
+
+    if (keys.length > 0) {
+      await s3.send(
+        new DeleteObjectsCommand({
+          Bucket: process.env.S3_BUCKET,
+          Delete: { Objects: keys.map((Key) => ({ Key })) },
+        }),
+      );
+      console.log(`Deleted ${keys.length} S3 files for media ${id}`);
+    }
+
+    // Delete from DB
+    await db.query("DELETE FROM media WHERE id = $1", [id]);
+
+    res.json({ success: true, message: "Deleted" });
+  } catch (err) {
+    console.error("[DELETE /api/media/:id] error:", err);
+    res.status(500).json({ error: "Delete failed" });
   }
 });
 
