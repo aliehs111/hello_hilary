@@ -5,7 +5,7 @@ import { Pagination, Navigation, Autoplay } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 import "swiper/css/navigation";
-
+import HelloHilaryLogo192 from "@/assets/HelloHilaryLogo192.png";
 import VideoCard from "@/components/VideoCard";
 import FilterPanel from "@/components/FilterPanel";
 
@@ -30,7 +30,8 @@ export default function Gallery() {
   const [playlistActive, setPlaylistActive] = useState(false);
   const [playlistEndTime, setPlaylistEndTime] = useState(null);
 
-  const [duration, setDuration] = useState(30);
+  const [duration, setDuration] = useState(1800);
+
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -257,13 +258,6 @@ export default function Gallery() {
     if (!current) return;
 
     playVideo(current.playback_key || current.original_key, current.title);
-
-    // safety advance in case video is very long
-    const timeout = setTimeout(() => {
-      handleVideoEnd();
-    }, 90000); // advance after 90 seconds max
-
-    return () => clearTimeout(timeout);
   }, [playlistActive, playlist, playlistIndex]);
 
   const playVideo = async (key, title) => {
@@ -301,7 +295,7 @@ export default function Gallery() {
     if (!playlistActive) return;
 
     // stop if session time expired
-    if (Date.now() > playlistEndTime) {
+    if (playlistEndTime && Date.now() > playlistEndTime) {
       setPlaylistActive(false);
       closePlayer();
       return;
@@ -348,6 +342,17 @@ export default function Gallery() {
   ];
 
   const handlePlayAll = () => {
+    if (videos.length === 0) return;
+
+    const shuffled = shuffleVideos(videos);
+
+    setPlaylist(shuffled);
+    setPlaylistIndex(0);
+    setPlaylistActive(true);
+    setPlaylistEndTime(null);
+  };
+
+  const handlePlayFiltered = () => {
     if (filteredVideos.length === 0) return;
 
     const shuffled = shuffleVideos(filteredVideos);
@@ -364,7 +369,7 @@ export default function Gallery() {
     (dateRange !== "any" ? 1 : 0);
 
   return (
-    <div className="min-h-screen pt-20 px-6 pb-16 bg-gradient-to-b from-pink-50 to-blue-50">
+    <div className="min-h-screen pt-10 px-6 pb-16 bg-gradient-to-b from-pink-50 to-blue-50">
       <div className="max-w-7xl mx-auto">
         <section className="mb-8">
           <div className="text-center">
@@ -393,14 +398,14 @@ export default function Gallery() {
                 <div className="flex flex-col sm:flex-row justify-center gap-4">
                   <button
                     onClick={handlePlayAll}
-                    className="bg-gradient-to-r from-pink-500 to-rose-500 text-white text-2xl md:text-3xl font-bold px-10 md:px-14 py-5 md:py-6 rounded-full shadow-xl hover:scale-[1.02] transition"
+                    className="w-full sm:w-auto bg-gradient-to-r from-pink-500 to-rose-500 text-white text-lg md:text-xl font-bold px-6 md:px-8 py-3 md:py-4 rounded-full shadow-lg hover:scale-[1.02] transition"
                   >
                     ▶ Play All Videos
                   </button>
 
                   <button
                     onClick={() => setFiltersOpen(true)}
-                    className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-2xl md:text-3xl font-bold px-10 md:px-14 py-5 md:py-6 rounded-full shadow-xl hover:scale-[1.02] transition"
+                    className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-lg md:text-xl font-bold px-6 md:px-8 py-3 md:py-4 rounded-full shadow-lg hover:scale-[1.02] transition"
                   >
                     🔎 Choose Filters
                   </button>
@@ -408,16 +413,15 @@ export default function Gallery() {
                 <div className="flex justify-center mt-8">
                   <button
                     onClick={startRandomVibe}
-                    className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-2xl md:text-3xl font-bold px-10 md:px-14 py-5 md:py-6 rounded-full shadow-xl hover:scale-[1.02] transition"
+                    className="flex items-center justify-center gap-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg md:text-xl font-bold px-6 md:px-8 py-3 md:py-4 rounded-full shadow-lg hover:scale-[1.02] transition"
                   >
-                    ✨ Play Something Nice
+                    <img
+                      src={HelloHilaryLogo192}
+                      alt="Doddy"
+                      className="w-8 h-8"
+                    />
+                    Let Doddy Pick the Reels!
                   </button>
-                </div>
-
-                <div className="mt-4">
-                  <p className="mt-5 text-sm text-gray-500">
-                    Or choose a video below
-                  </p>
                 </div>
               </div>
             </section>
@@ -438,30 +442,33 @@ export default function Gallery() {
                   </p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center gap-3">
-                  <label className="text-sm font-medium text-gray-700">
-                    Play for
-                  </label>
+                {activeFilterCount > 0 && (
+                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                    <label className="text-sm font-medium text-gray-700">
+                      Play for
+                    </label>
 
-                  <select
-                    value={duration}
-                    onChange={(e) => setDuration(Number(e.target.value))}
-                    className="rounded-xl border border-pink-200 bg-white px-4 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
-                  >
-                    <option value={300}>5 minutes</option>
-                    <option value={600}>10 minutes</option>
-                    <option value={1200}>20 minutes</option>
-                    <option value={1800}>30 minutes</option>
-                  </select>
+                    <select
+                      value={duration}
+                      onChange={(e) => setDuration(Number(e.target.value))}
+                      className="rounded-xl border border-pink-200 bg-white px-4 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    >
+                      <option value={600}>10 minutes</option>
+                      <option value={1200}>20 minutes</option>
+                      <option value={1800}>30 minutes</option>
+                      <option value={2400}>40 minutes</option>
+                      <option value={3600}>60 minutes</option>
+                    </select>
 
-                  <button
-                    onClick={handlePlayAll}
-                    disabled={filteredVideos.length === 0}
-                    className="rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-bold px-6 py-3 shadow-lg hover:scale-[1.01] transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    ▶ Play These Videos
-                  </button>
-                </div>
+                    <button
+                      onClick={handlePlayFiltered}
+                      disabled={filteredVideos.length === 0}
+                      className="rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-bold px-6 py-3 shadow-lg hover:scale-[1.01] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      ▶ Play These Videos
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {filteredVideos.map((v) => (
