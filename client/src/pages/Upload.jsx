@@ -1,5 +1,19 @@
 // src/pages/Upload.jsx
 import { useMemo, useState } from "react";
+import ConfettiBurst from "../components/ConfettiBurst";
+
+const MEDIA_CATEGORIES = [
+  "Just a Hello",
+  "Animals",
+  "Memories",
+  "Music Performance",
+  "Singing",
+  "Babies and Little People",
+  "Reading a Book",
+  "Nature",
+  "Funny",
+  "Creative",
+];
 
 function getKindFromFile(file) {
   return file.type.startsWith("video/") ? "video" : "photo";
@@ -14,14 +28,24 @@ function getExtensionFromFile(file) {
 export default function Upload() {
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState("");
-  const [note, setNote] = useState(""); // maps to caption
-  const [category, setCategory] = useState(""); // optional if you want it now
+  const [note, setNote] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [isHilaryPage, setIsHilaryPage] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
-  const [status, setStatus] = useState(""); // 'success', 'error', or ''
+  const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [confettiTrigger, setConfettiTrigger] = useState(0);
 
   const fileKind = useMemo(() => (file ? getKindFromFile(file) : null), [file]);
 
+  const toggleCategory = (category) => {
+    setSelectedCategories((prev) =>
+      prev.includes(category)
+        ? prev.filter((c) => c !== category)
+        : [...prev, category],
+    );
+  };
   const handleFileChange = (e) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
@@ -113,7 +137,8 @@ export default function Upload() {
           size_bytes: file.size,
           title: title || null,
           caption: note || null,
-          category: category || null,
+          categories: selectedCategories,
+          is_hilary_page: isHilaryPage,
           original_filename: file.name,
         }),
       });
@@ -128,10 +153,16 @@ export default function Upload() {
 
       setStatus("success");
       setStatusMessage("Upload successful! Thank you 💕");
+
+      setConfettiTrigger((n) => n + 1);
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 1600);
+
       setFile(null);
       setTitle("");
       setNote("");
-      setCategory("");
+      setSelectedCategories([]);
+      setIsHilaryPage(false);
     } catch (err) {
       console.error(err);
       setStatus("error");
@@ -143,7 +174,9 @@ export default function Upload() {
 
   return (
     <div className="min-h-screen pt-20 px-6 pb-12 flex items-center justify-center bg-gradient-to-b from-pink-50 to-blue-50">
-      <div className="max-w-md w-full bg-white p-8 rounded-xl shadow-lg">
+      <div className="relative max-w-md w-full bg-white p-8 rounded-xl shadow-lg">
+        {showConfetti && <ConfettiBurst trigger={confettiTrigger} count={26} />}
+
         <h1 className="text-3xl font-bold text-pink-800 mb-6 text-center">
           Add Your Hello for Hilary 💕
         </h1>
@@ -164,31 +197,46 @@ export default function Upload() {
               placeholder="Picking daisies in the meadow"
             />
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Message / Note (optional)
+              Message / Description (optional)
             </label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={3}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
-              placeholder="A short note about this hello..."
+              placeholder="Say hello to Hilary..."
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Category (optional)
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Categories
             </label>
-            <input
-              type="text"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
-              placeholder="birthday, family, dogs..."
-            />
+
+            <div className="grid grid-cols-2 gap-2">
+              {MEDIA_CATEGORIES.map((cat) => (
+                <label key={cat} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={selectedCategories.includes(cat)}
+                    onChange={() => toggleCategory(cat)}
+                  />
+                  {cat}
+                </label>
+              ))}
+            </div>
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={isHilaryPage}
+                  onChange={(e) => setIsHilaryPage(e.target.checked)}
+                />
+                Post to Hilary Page
+              </label>
+            </div>
           </div>
 
           <div>

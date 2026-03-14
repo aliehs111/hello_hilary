@@ -37,7 +37,23 @@ export default function Gallery() {
       setErr("");
 
       try {
-        const res = await fetch("/api/media");
+        const params = new URLSearchParams();
+
+        if (selectedCategories.length > 0) {
+          params.set("categories", selectedCategories.join(","));
+        }
+
+        if (uploader !== "all") {
+          params.set("uploader", uploader);
+        }
+
+        if (dateRange !== "any") {
+          params.set("dateRange", dateRange);
+        }
+
+        const url = `/api/media${params.toString() ? `?${params.toString()}` : ""}`;
+
+        const res = await fetch(url);
         const data = await res.json().catch(() => ({}));
 
         if (!res.ok) throw new Error(data?.error || "Failed to load media");
@@ -98,7 +114,7 @@ export default function Gallery() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [selectedCategories, uploader, dateRange]);
 
   const photos = useMemo(
     () => media.filter((m) => m.media_type === "photo"),

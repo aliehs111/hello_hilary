@@ -1,13 +1,14 @@
 // src/pages/Hilary.jsx
 import { Link } from "react-router-dom";
 import HilaryMainPhoto from "../assets/HilPeach.jpg";
-
+import SparkleOverlay from "../components/SparkleOverlay";
 export default function Hilary() {
   return (
     <div className="min-h-screen pt-20 px-6 pb-16 bg-gradient-to-b from-pink-50 to-blue-50">
       <div className="max-w-5xl mx-auto">
         {/* Hero profile section */}
-        <div className="text-center mb-12">
+        <div className="relative text-center mb-12">
+          <SparkleOverlay count={14} />
           <img
             src={HilaryMainPhoto}
             alt="Hilary smiling warmly"

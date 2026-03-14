@@ -18,7 +18,7 @@ const s3 = new S3Client({
 });
 router.get("/", async (req, res) => {
   try {
-    const { uploader, media_type, category, q } = req.query;
+    const { uploader, media_type, categories, q } = req.query;
     const status = req.query.status;
 
     let query = `
@@ -33,7 +33,8 @@ router.get("/", async (req, res) => {
         m.thumbnail_key,
         m.title,
         m.caption,
-        m.category,
+        m.categories,
+        m.is_hilary_page,
         m.original_filename,
         m.mime_type,
         m.size_bytes,
@@ -67,9 +68,16 @@ router.get("/", async (req, res) => {
       values.push(media_type);
     }
 
-    if (category) {
-      query += ` AND m.category = $${idx++}`;
-      values.push(category);
+    if (categories) {
+      const categoryArray = categories
+        .split(",")
+        .map((c) => c.trim())
+        .filter(Boolean);
+
+      if (categoryArray.length > 0) {
+        query += ` AND m.categories && $${idx++}::text[]`;
+        values.push(categoryArray);
+      }
     }
 
     if (q) {
@@ -101,7 +109,8 @@ router.post("/complete", async (req, res) => {
       size_bytes,
       title,
       caption,
-      category,
+      categories,
+      is_hilary_page,
       original_filename,
     } = req.body;
 
@@ -110,26 +119,27 @@ router.post("/complete", async (req, res) => {
     const initialStatus = media_type === "photo" ? "ready" : "processing";
 
     const insert = `
-      INSERT INTO media (
-        user_id,
-        media_type,
-        status,
-        original_key,
-        playback_key,
-        thumbnail_key,
-        title,
-        caption,
-        category,
-        is_featured,
-        is_hidden,
-        original_filename,
-        mime_type,
-        size_bytes,
-        error_message
-      )
-      VALUES ($1,$2,$3,$4,NULL,NULL,$5,$6,$7,false,false,$8,$9,$10,NULL)
-      RETURNING id
-    `;
+  INSERT INTO media (
+    user_id,
+    media_type,
+    status,
+    original_key,
+    playback_key,
+    thumbnail_key,
+    title,
+    caption,
+    categories,
+    is_hilary_page,
+    is_featured,
+    is_hidden,
+    original_filename,
+    mime_type,
+    size_bytes,
+    error_message
+  )
+  VALUES ($1,$2,$3,$4,NULL,NULL,$5,$6,$7,$8,false,false,$9,$10,$11,NULL)
+  RETURNING id
+`;
 
     const values = [
       user_id,
@@ -138,7 +148,8 @@ router.post("/complete", async (req, res) => {
       original_key,
       title ?? null,
       caption ?? null,
-      category ?? null,
+      categories ?? [],
+      is_hilary_page ?? false,
       original_filename ?? null,
       mime_type,
       Number(size_bytes) || null,

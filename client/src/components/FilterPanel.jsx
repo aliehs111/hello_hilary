@@ -1,12 +1,15 @@
 // src/components/FilterPanel.jsx
 const CATEGORIES = [
-  "Everyday Hello",
-  "Dogs / Pets",
-  "Family",
-  "Music / Singing",
-  "Funny / Silly",
-  "Memory Video",
-  "Reading / Story",
+  "Just a Hello",
+  "Animals",
+  "Memories",
+  "Music Performance",
+  "Singing",
+  "Babies and Little People",
+  "Reading a Book",
+  "Nature",
+  "Funny",
+  "Creative",
 ];
 
 export default function FilterPanel({
