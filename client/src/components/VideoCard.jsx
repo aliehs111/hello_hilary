@@ -1,5 +1,8 @@
 import { useState } from "react";
 
+import ConfirmModal from "@/components/ConfirmModal";
+import SuccessModal from "@/components/SuccessModal";
+
 export default function VideoCard({ video, thumbnailUrl, onPlay }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -64,41 +67,24 @@ export default function VideoCard({ video, thumbnailUrl, onPlay }) {
         delete
       </button>
 
-      {showConfirm && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-white rounded-3xl shadow-xl p-8 text-center">
-            <p className="mb-6 font-semibold">Delete this video?</p>
+      <ConfirmModal
+        isOpen={showConfirm}
+        title="Delete this video?"
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={handleDelete}
+        onCancel={() => setShowConfirm(false)}
+      />
 
-            <div className="flex gap-4 justify-center">
-              <button
-                onClick={() => setShowConfirm(false)}
-                className="px-6 py-3 bg-gray-200 rounded-xl"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={handleDelete}
-                className="px-6 py-3 bg-red-500 text-white rounded-xl"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showSuccess && (
-        <div
-          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
-          onClick={() => window.location.reload()}
-        >
-          <div className="bg-white rounded-3xl p-8 text-center">
-            <div className="text-5xl mb-3">✅</div>
-            Deleted
-          </div>
-        </div>
-      )}
+      <SuccessModal
+        isOpen={showSuccess}
+        title="Deleted"
+        message="The video was deleted."
+        onClose={() => {
+          setShowSuccess(false);
+          window.location.reload();
+        }}
+      />
     </div>
   );
 }

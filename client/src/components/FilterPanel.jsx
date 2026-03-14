@@ -22,6 +22,8 @@ export default function FilterPanel({
   uploaderOptions,
   dateRange,
   onChangeDateRange,
+  duration,
+  onChangeDuration,
   onClear,
 }) {
   if (!isOpen) return null;
