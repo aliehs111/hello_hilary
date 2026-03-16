@@ -11,7 +11,7 @@ import SparkleOverlay from "../components/SparkleOverlay";
 import VideoCard from "@/components/VideoCard";
 import ConfirmModal from "@/components/ConfirmModal";
 import SuccessModal from "@/components/SuccessModal";
-import FeaturedVideoCard from "@/components/FeaturedVideoCard";
+// import FeaturedVideoCard from "@/components/FeaturedVideoCard";
 
 export default function Hilary() {
   const [media, setMedia] = useState([]);
@@ -458,7 +458,9 @@ export default function Hilary() {
                   autoPlay
                   playsInline
                   preload="auto"
-                  onLoadedData={(e) => e.target.play()}
+                  onLoadedData={(e) => {
+                    e.currentTarget.play().catch(() => {});
+                  }}
                   className="w-full max-h-[74vh] bg-black object-contain"
                 />
               </div>

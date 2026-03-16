@@ -24,6 +24,7 @@ export default function Gallery() {
   const [playerOpen, setPlayerOpen] = useState(false);
   const [playerUrl, setPlayerUrl] = useState("");
   const [playerTitle, setPlayerTitle] = useState("");
+  const [playerPoster, setPlayerPoster] = useState("");
 
   const [playlist, setPlaylist] = useState([]);
   const [playlistIndex, setPlaylistIndex] = useState(0);
@@ -258,8 +259,12 @@ export default function Gallery() {
     const current = playlist[playlistIndex];
     if (!current) return;
 
-    playVideo(current.playback_key || current.original_key, current.title);
-  }, [playlistActive, playlist, playlistIndex]);
+    playVideo(
+      current.playback_key || current.original_key,
+      current.title,
+      videoThumbUrls[current.id] || "",
+    );
+  }, [playlistActive, playlist, playlistIndex, videoThumbUrls]);
 
   const playVideo = async (key, title) => {
     try {
@@ -481,7 +486,11 @@ export default function Gallery() {
                     video={v}
                     thumbnailUrl={videoThumbUrls[v.id]}
                     onPlay={() =>
-                      playVideo(v.playback_key || v.original_key, v.title)
+                      playVideo(
+                        v.playback_key || v.original_key,
+                        v.title,
+                        videoThumbUrls[v.id] || "",
+                      )
                     }
                   />
                 ))}
@@ -668,13 +677,19 @@ export default function Gallery() {
                 <video
                   key={playerUrl}
                   src={playerUrl}
-                  controls
+                  poster={playerPoster}
+                  controls={!playlistActive}
                   autoPlay
                   playsInline
                   preload="auto"
-                  onLoadedData={(e) => e.target.play()}
+                  onLoadedData={(e) => {
+                    setVideoLoading(false);
+                    e.currentTarget.play().catch(() => {});
+                  }}
                   onEnded={handleVideoEnd}
-                  className="w-full max-h-[74vh] bg-black object-contain"
+                  className={`w-full max-h-[74vh] bg-black object-contain transition-opacity duration-200 ${
+                    videoLoading ? "opacity-0" : "opacity-100"
+                  }`}
                 />
               </div>
 
