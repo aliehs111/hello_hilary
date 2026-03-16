@@ -266,7 +266,7 @@ export default function Gallery() {
     );
   }, [playlistActive, playlist, playlistIndex, videoThumbUrls]);
 
-  const playVideo = async (key, title) => {
+  const playVideo = async (key, title, poster = "") => {
     try {
       setVideoLoading(true);
 
@@ -280,6 +280,7 @@ export default function Gallery() {
 
       setPlayerUrl(data.url);
       setPlayerTitle(title || "Hello Video");
+      setPlayerPoster(poster || "");
       setPlayerOpen(true);
     } catch (e) {
       setVideoLoading(false);
@@ -707,6 +708,12 @@ export default function Gallery() {
                     className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 border border-gray-200 shadow-sm hover:bg-gray-50 transition"
                   >
                     Stop
+                  </button>
+                  <button
+                    onClick={() => setShowConfirm(true)}
+                    className="rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-red-600 transition"
+                  >
+                    Delete
                   </button>
                 </div>
               </div>

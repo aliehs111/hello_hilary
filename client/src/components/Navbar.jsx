@@ -15,6 +15,7 @@ const navigation = [
   { name: "Hilary", href: "/hilary" },
   { name: "About", href: "/about" },
   { name: "Upload", href: "/upload" },
+  { name: "Home", href: "/" },
 ];
 
 export default function Navbar() {

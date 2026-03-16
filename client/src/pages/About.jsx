@@ -19,7 +19,7 @@ const benefits = [
   "Hilary can watch your videos on her iPad with help — anytime, as many times as she likes.",
   "Over time, she'll have a growing collection of loving messages, songs, and stories.",
   "We also help Hilary upload her own videos so everyone can stay connected.",
-  "Ideas: sing a song, say hello, share your day, show your pets — anything short and sweet!",
+  "Ideas: Just say hello! Sing a song, share your day, show your pets — the point is to remind Hilary that you're thinking of her and to entertain her.",
   "This is a private app made just for Hilary — please keep it within her circle of family and friends.",
 ];
 
@@ -48,7 +48,7 @@ const faqs = [
   {
     question: "What is my email used for?",
     answer:
-      "No marketing emails or spam — ever. We may add gentle notifications for new videos in the future, but we're such a small group of users that I'm not going to even integrate any automated email systems.  If you hear from us via email, it's because we are just keeping you in the loop!",
+      "No marketing emails or spam — ever. I might send out little reminders or announcements for new videos, but we're such a small group of users that I'm not going to automate any emails or anything crazy.  If you do not want to receive any emails, just let me know!",
   },
   {
     question: "Can I add this to my phone home screen?",
@@ -83,7 +83,7 @@ export default function About() {
 
             <p className="text-xl text-gray-700 leading-relaxed">
               If you are part of Hilary's support circle, I am so grateful for
-              all that you do to help her live her best life. As her family who
+              all that you do to help her live her best life! As her family who
               can't always be there in person, it would really warm our hearts
               to see her involved in fun activities or just a random hello from
               her from time to time. We're hoping you can upload photos and
@@ -93,7 +93,7 @@ export default function About() {
 
             <p className="text-xl text-gray-700 leading-relaxed">
               Think of this as a window for us to share our lives with Hilary
-              while you help us see Hilary's life at home or at programs.
+              while you help us see Hilary's life at home or at program.
             </p>
           </div>
         </div>
@@ -103,14 +103,25 @@ export default function About() {
           <h2 className="text-3xl md:text-4xl font-bold text-pink-700 mb-8 text-center">
             How to Make Hilary Smile!
           </h2>
-          <ul className="grid grid-cols-1 md:grid-cols-2 gap-6 text-lg text-gray-800">
-            {benefits.map((benefit, index) => (
-              <li key={index} className="flex items-start gap-4">
-                <CheckCircleIcon className="h-7 w-7 text-pink-500 flex-shrink-0 mt-1" />
-                <span>{benefit}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6 text-lg text-gray-800">
+            <ul className="space-y-6">
+              {benefits.slice(0, 3).map((benefit, index) => (
+                <li key={index} className="flex items-start gap-4">
+                  <CheckCircleIcon className="mt-1 h-7 w-7 flex-shrink-0 text-pink-500" />
+                  <span className="leading-relaxed">{benefit}</span>
+                </li>
+              ))}
+            </ul>
+
+            <ul className="space-y-6">
+              {benefits.slice(3, 6).map((benefit, index) => (
+                <li key={index} className="flex items-start gap-4">
+                  <CheckCircleIcon className="mt-1 h-7 w-7 flex-shrink-0 text-pink-500" />
+                  <span className="leading-relaxed">{benefit}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         {/* FAQ Accordion */}
@@ -158,7 +169,7 @@ export default function About() {
         {/* Footer call-to-action */}
         <div className="mt-16 text-center">
           <p className="text-xl text-gray-600 mb-6">
-            Thank you for being part of Hilary's circle of love.
+            Thank you for being part of the Hello Hilary Project!
           </p>
         </div>
       </div>

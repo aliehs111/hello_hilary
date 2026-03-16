@@ -121,3 +121,39 @@ body {
     transform: rotate(-45deg) scale(0.4);
   }
 }
+
+.heart-button {
+  position: relative;
+  overflow: visible;
+}
+
+.heart-button::after {
+  content: "💖  💗   💕";
+  position: absolute;
+  left: 50%;
+  bottom: 10%;
+  transform: translateX(-50%);
+  font-size: 20px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.heart-button:hover::after {
+  animation: floatHearts 1.4s ease-out forwards;
+}
+
+@keyframes floatHearts {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.8);
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -80px) scale(1.4);
+  }
+}
