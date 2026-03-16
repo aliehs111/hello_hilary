@@ -43,6 +43,7 @@ export default function Gallery() {
 
   const [showPhotoDeleteConfirm, setShowPhotoDeleteConfirm] = useState(false);
   const [showPhotoDeleteSuccess, setShowPhotoDeleteSuccess] = useState(false);
+  const [videoLoading, setVideoLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -262,6 +263,8 @@ export default function Gallery() {
 
   const playVideo = async (key, title) => {
     try {
+      setVideoLoading(true);
+
       const res = await fetch(
         `/api/s3/presign-download?key=${encodeURIComponent(key)}`,
       );
@@ -274,6 +277,7 @@ export default function Gallery() {
       setPlayerTitle(title || "Hello Video");
       setPlayerOpen(true);
     } catch (e) {
+      setVideoLoading(false);
       alert(e.message || "Could not play video");
     }
   };
