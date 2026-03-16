@@ -678,7 +678,7 @@ export default function Gallery() {
                   key={playerUrl}
                   src={playerUrl}
                   poster={playerPoster}
-                  controls={!playlistActive}
+                  controls={false}
                   autoPlay
                   playsInline
                   preload="auto"
