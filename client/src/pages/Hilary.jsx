@@ -475,7 +475,7 @@ export default function Hilary() {
                   key={playerUrl}
                   src={playerUrl}
                   poster={playerPoster}
-                  controls
+                  controls={false}
                   autoPlay
                   playsInline
                   preload="auto"
