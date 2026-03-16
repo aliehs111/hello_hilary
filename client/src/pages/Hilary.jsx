@@ -11,7 +11,6 @@ import SparkleOverlay from "../components/SparkleOverlay";
 import VideoCard from "@/components/VideoCard";
 import ConfirmModal from "@/components/ConfirmModal";
 import SuccessModal from "@/components/SuccessModal";
-// import FeaturedVideoCard from "@/components/FeaturedVideoCard";
 
 export default function Hilary() {
   const [media, setMedia] = useState([]);
@@ -25,6 +24,8 @@ export default function Hilary() {
   const [playerOpen, setPlayerOpen] = useState(false);
   const [playerUrl, setPlayerUrl] = useState("");
   const [playerTitle, setPlayerTitle] = useState("");
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [playerPoster, setPlayerPoster] = useState("");
 
   const [photoViewerOpen, setPhotoViewerOpen] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
@@ -123,8 +124,10 @@ export default function Hilary() {
     [videos],
   );
 
-  const playVideo = async (key, title) => {
+  const playVideo = async (key, title, poster = "") => {
     try {
+      setVideoLoading(true);
+
       const res = await fetch(
         `/api/s3/presign-download?key=${encodeURIComponent(key)}`,
       );
@@ -135,8 +138,10 @@ export default function Hilary() {
 
       setPlayerUrl(data.url);
       setPlayerTitle(title || "Hilary Video");
+      setPlayerPoster(poster || "");
       setPlayerOpen(true);
     } catch (e) {
+      setVideoLoading(false);
       alert(e.message || "Could not play video");
     }
   };
@@ -145,6 +150,8 @@ export default function Hilary() {
     setPlayerOpen(false);
     setPlayerUrl("");
     setPlayerTitle("");
+    setPlayerPoster("");
+    setVideoLoading(false);
   };
 
   const openPhotoViewer = (photo) => {
@@ -190,7 +197,7 @@ export default function Hilary() {
   }, [playerOpen]);
 
   return (
-    <div className="min-h-screen pt-20 px-6 pb-16 bg-gradient-to-b from-pink-50 to-blue-50">
+    <div className="min-h-screen pt-20 px-4 sm:px-6 pb-16 bg-gradient-to-b from-pink-50 to-blue-50">
       <div className="max-w-7xl mx-auto">
         <div className="relative mb-16">
           <SparkleOverlay count={14} />
@@ -222,23 +229,24 @@ export default function Hilary() {
               </h2>
 
               {featuredVideos.length > 0 && (
-                <div className="flex gap-4 overflow-x-auto pb-2">
-                  {featuredVideos.slice(0, 3).map((video) => (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {featuredVideos.map((video) => (
                     <button
                       key={video.id}
                       onClick={() =>
                         playVideo(
                           video.playback_key || video.original_key,
                           video.title,
+                          videoThumbUrls[video.id] || "",
                         )
                       }
-                      className="group shrink-0 w-40"
+                      className="group w-full"
                     >
                       <div className="relative rounded-2xl overflow-hidden shadow-lg">
                         <img
                           src={videoThumbUrls[video.id]}
-                          alt=""
-                          className="w-full h-40 object-cover group-hover:scale-105 transition"
+                          alt={video.title || "Featured video"}
+                          className="w-full h-32 sm:h-40 object-cover group-hover:scale-105 transition"
                         />
                       </div>
                     </button>
@@ -266,7 +274,7 @@ export default function Hilary() {
             <section className="mb-16">
               <div className="mb-6 text-center"></div>
 
-              {videos.length > 0 ? (
+              {regularVideos.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                   {regularVideos.map((v) => (
                     <VideoCard
@@ -274,7 +282,11 @@ export default function Hilary() {
                       video={v}
                       thumbnailUrl={videoThumbUrls[v.id]}
                       onPlay={() =>
-                        playVideo(v.playback_key || v.original_key, v.title)
+                        playVideo(
+                          v.playback_key || v.original_key,
+                          v.title,
+                          videoThumbUrls[v.id] || "",
+                        )
                       }
                     />
                   ))}
@@ -450,18 +462,30 @@ export default function Hilary() {
                 </button>
               </div>
 
-              <div className="bg-black">
+              <div className="relative bg-black flex items-center justify-center min-h-[300px]">
+                {videoLoading && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-black">
+                    <div className="text-white text-sm font-semibold animate-pulse">
+                      Loading video...
+                    </div>
+                  </div>
+                )}
+
                 <video
                   key={playerUrl}
                   src={playerUrl}
+                  poster={playerPoster}
                   controls
                   autoPlay
                   playsInline
                   preload="auto"
                   onLoadedData={(e) => {
+                    setVideoLoading(false);
                     e.currentTarget.play().catch(() => {});
                   }}
-                  className="w-full max-h-[74vh] bg-black object-contain"
+                  className={`w-full max-h-[74vh] bg-black object-contain transition-opacity duration-200 ${
+                    videoLoading ? "opacity-0" : "opacity-100"
+                  }`}
                 />
               </div>
 
