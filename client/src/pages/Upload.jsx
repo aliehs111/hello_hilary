@@ -227,15 +227,34 @@ export default function Upload() {
                 </label>
               ))}
             </div>
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={isHilaryPage}
-                  onChange={(e) => setIsHilaryPage(e.target.checked)}
-                />
-                Post to Hilary Page
-              </label>
+            <div className="rounded-2xl border border-pink-100 bg-pink-50/70 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-pink-800">
+                    Post to Hilary’s Page
+                  </p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Turn this on if this photo or video is a special Hilary
+                    moment and should appear on her personal page.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsHilaryPage((prev) => !prev)}
+                  className={`relative inline-flex h-7 w-14 items-center rounded-full transition ${
+                    isHilaryPage ? "bg-pink-500" : "bg-gray-300"
+                  }`}
+                  aria-pressed={isHilaryPage}
+                  aria-label="Post to Hilary's Page"
+                >
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+                      isHilaryPage ? "translate-x-8" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
           </div>
 

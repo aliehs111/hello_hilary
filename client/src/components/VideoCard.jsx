@@ -28,8 +28,21 @@ export default function VideoCard({ video, thumbnailUrl, onPlay }) {
   };
 
   return (
-    <div className="bg-white rounded-3xl shadow-xl overflow-hidden p-5 flex flex-col">
-      <div className="rounded-xl overflow-hidden aspect-video bg-gradient-to-br from-pink-200 to-blue-200">
+    <div
+      className={`bg-white rounded-3xl overflow-hidden p-5 flex flex-col transition
+  ${
+    video.is_featured
+      ? "shadow-[0_0_0_3px_rgba(236,72,153,0.35),0_12px_30px_rgba(236,72,153,0.25)]"
+      : "shadow-xl"
+  }`}
+    >
+      <div className="relative rounded-xl overflow-hidden aspect-video bg-gradient-to-br from-pink-200 to-blue-200">
+        {video.is_featured && (
+          <div className="absolute top-2 left-2 bg-pink-600 text-white text-xs px-3 py-1 rounded-full shadow">
+            Featured
+          </div>
+        )}
+
         {thumbnailUrl ? (
           <img
             src={thumbnailUrl}

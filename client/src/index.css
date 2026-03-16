@@ -12,6 +12,10 @@ h1 {
   font-family: "Playfair Display", serif;
 } */
 
+body {
+  font-family: "Nunito", sans-serif;
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;

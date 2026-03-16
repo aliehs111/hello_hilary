@@ -18,7 +18,7 @@ const s3 = new S3Client({
 });
 router.get("/", async (req, res) => {
   try {
-    const { uploader, media_type, categories, q } = req.query;
+    const { uploader, media_type, categories, q, hilary_page } = req.query;
     const status = req.query.status;
 
     let query = `
@@ -66,6 +66,12 @@ router.get("/", async (req, res) => {
     if (media_type) {
       query += ` AND m.media_type = $${idx++}`;
       values.push(media_type);
+    }
+
+    if (hilary_page === "true") {
+      query += ` AND m.is_hilary_page = true`;
+    } else if (hilary_page === "false") {
+      query += ` AND m.is_hilary_page = false`;
     }
 
     if (categories) {
@@ -268,6 +274,69 @@ router.post("/:id/failed", async (req, res) => {
   } catch (err) {
     console.error("[POST /api/media/:id/failed] error:", err);
     res.status(500).json({ error: "Failed to mark media failed" });
+  }
+});
+
+// PATCH /api/media/:id
+router.patch("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { is_featured, is_hidden, is_hilary_page, title, caption } = req.body;
+
+    const fields = [];
+    const values = [];
+    let idx = 1;
+
+    if (typeof is_featured === "boolean") {
+      fields.push(`is_featured = $${idx++}`);
+      values.push(is_featured);
+    }
+
+    if (typeof is_hidden === "boolean") {
+      fields.push(`is_hidden = $${idx++}`);
+      values.push(is_hidden);
+    }
+
+    if (typeof is_hilary_page === "boolean") {
+      fields.push(`is_hilary_page = $${idx++}`);
+      values.push(is_hilary_page);
+    }
+
+    if (typeof title === "string") {
+      fields.push(`title = $${idx++}`);
+      values.push(title.trim() || null);
+    }
+
+    if (typeof caption === "string") {
+      fields.push(`caption = $${idx++}`);
+      values.push(caption.trim() || null);
+    }
+
+    if (fields.length === 0) {
+      return res.status(400).json({ error: "No valid fields to update" });
+    }
+
+    fields.push(`updated_at = now()`);
+    values.push(id);
+
+    const result = await db.query(
+      `
+      UPDATE media
+      SET ${fields.join(", ")}
+      WHERE id = $${idx}
+      RETURNING *
+      `,
+      values,
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Media not found" });
+    }
+
+    res.json({ media: result.rows[0] });
+  } catch (err) {
+    console.error("[PATCH /api/media/:id] error:", err);
+    res.status(500).json({ error: "Failed to update media" });
   }
 });
 

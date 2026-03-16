@@ -667,6 +667,8 @@ export default function Gallery() {
                   controls
                   autoPlay
                   playsInline
+                  preload="auto"
+                  onLoadedData={(e) => e.target.play()}
                   onEnded={handleVideoEnd}
                   className="w-full max-h-[74vh] bg-black object-contain"
                 />

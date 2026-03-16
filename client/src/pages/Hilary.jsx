@@ -1,74 +1,486 @@
-// src/pages/Hilary.jsx
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Pagination, Navigation, Autoplay } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/pagination";
+import "swiper/css/navigation";
+
 import HilaryMainPhoto from "../assets/HilPeach.jpg";
 import SparkleOverlay from "../components/SparkleOverlay";
+import VideoCard from "@/components/VideoCard";
+import ConfirmModal from "@/components/ConfirmModal";
+import SuccessModal from "@/components/SuccessModal";
+import FeaturedVideoCard from "@/components/FeaturedVideoCard";
+
 export default function Hilary() {
+  const [media, setMedia] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+
+  const [photoUrls, setPhotoUrls] = useState({});
+  const [photoLoadFailed, setPhotoLoadFailed] = useState({});
+  const [videoThumbUrls, setVideoThumbUrls] = useState({});
+
+  const [playerOpen, setPlayerOpen] = useState(false);
+  const [playerUrl, setPlayerUrl] = useState("");
+  const [playerTitle, setPlayerTitle] = useState("");
+
+  const [photoViewerOpen, setPhotoViewerOpen] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
+
+  const [showPhotoDeleteConfirm, setShowPhotoDeleteConfirm] = useState(false);
+  const [showPhotoDeleteSuccess, setShowPhotoDeleteSuccess] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setErr("");
+
+      try {
+        const res = await fetch("/api/media?hilary_page=true");
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) throw new Error(data?.error || "Failed to load media");
+
+        const mediaItems = data.media || [];
+        if (!cancelled) setMedia(mediaItems);
+
+        const photosOnly = mediaItems.filter((m) => m.media_type === "photo");
+        const videosOnly = mediaItems.filter((m) => m.media_type === "video");
+
+        const photoEntries = await Promise.all(
+          photosOnly.map(async (p) => {
+            try {
+              const urlRes = await fetch(
+                `/api/s3/presign-download?key=${encodeURIComponent(p.original_key)}`,
+              );
+              const urlData = await urlRes.json().catch(() => ({}));
+
+              if (!urlRes.ok || !urlData?.url) return [p.id, null];
+              return [p.id, urlData.url];
+            } catch {
+              return [p.id, null];
+            }
+          }),
+        );
+
+        const videoThumbEntries = await Promise.all(
+          videosOnly.map(async (v) => {
+            try {
+              if (!v.thumbnail_key) return [v.id, null];
+
+              const urlRes = await fetch(
+                `/api/s3/presign-download?key=${encodeURIComponent(v.thumbnail_key)}`,
+              );
+              const urlData = await urlRes.json().catch(() => ({}));
+
+              if (!urlRes.ok || !urlData?.url) return [v.id, null];
+              return [v.id, urlData.url];
+            } catch {
+              return [v.id, null];
+            }
+          }),
+        );
+
+        if (!cancelled) {
+          setPhotoUrls(Object.fromEntries(photoEntries));
+          setVideoThumbUrls(Object.fromEntries(videoThumbEntries));
+        }
+      } catch (e) {
+        if (!cancelled) setErr(e.message || "Failed to load media");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const photos = useMemo(
+    () => media.filter((m) => m.media_type === "photo"),
+    [media],
+  );
+
+  const videos = useMemo(
+    () => media.filter((m) => m.media_type === "video"),
+    [media],
+  );
+
+  const featuredVideos = useMemo(
+    () => videos.filter((v) => v.is_featured).slice(0, 3),
+    [videos],
+  );
+
+  const regularVideos = useMemo(
+    () => videos.filter((v) => !v.is_featured),
+    [videos],
+  );
+
+  const playVideo = async (key, title) => {
+    try {
+      const res = await fetch(
+        `/api/s3/presign-download?key=${encodeURIComponent(key)}`,
+      );
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) throw new Error(data?.error || "Failed to get video URL");
+      if (!data?.url) throw new Error("No URL returned");
+
+      setPlayerUrl(data.url);
+      setPlayerTitle(title || "Hilary Video");
+      setPlayerOpen(true);
+    } catch (e) {
+      alert(e.message || "Could not play video");
+    }
+  };
+
+  const closePlayer = () => {
+    setPlayerOpen(false);
+    setPlayerUrl("");
+    setPlayerTitle("");
+  };
+
+  const openPhotoViewer = (photo) => {
+    setSelectedPhoto(photo);
+    setPhotoViewerOpen(true);
+  };
+
+  const closePhotoViewer = () => {
+    setSelectedPhoto(null);
+    setPhotoViewerOpen(false);
+  };
+
+  const handleDeleteMedia = async (id) => {
+    try {
+      const res = await fetch(`/api/media/${id}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Delete failed");
+      }
+
+      setMedia((prev) => prev.filter((m) => m.id !== id));
+      setShowPhotoDeleteConfirm(false);
+      closePhotoViewer();
+      setShowPhotoDeleteSuccess(true);
+    } catch (e) {
+      alert(e.message || "Failed to delete media");
+    }
+  };
+
+  useEffect(() => {
+    if (!playerOpen) return;
+
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") closePlayer();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [playerOpen]);
+
   return (
     <div className="min-h-screen pt-20 px-6 pb-16 bg-gradient-to-b from-pink-50 to-blue-50">
-      <div className="max-w-5xl mx-auto">
-        {/* Hero profile section */}
-        <div className="relative text-center mb-12">
+      <div className="max-w-7xl mx-auto">
+        <div className="relative mb-16">
           <SparkleOverlay count={14} />
-          <img
-            src={HilaryMainPhoto}
-            alt="Hilary smiling warmly"
-            className="w-48 h-48 md:w-64 md:h-64 rounded-full object-cover mx-auto mb-6 shadow-2xl border-8 border-pink-200"
-          />
-          <h1 className="text-5xl md:text-6xl font-bold text-pink-800 mb-4">
-            Hilary's Page 💕
-          </h1>
-          <p className="text-2xl md:text-3xl text-gray-700 max-w-3xl mx-auto">
-            See what Hilary's been up to!
-          </p>
-        </div>
 
-        {/* Video grid – similar to Gallery but filtered */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {/* Placeholder cards for Hilary's videos */}
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition cursor-pointer">
-            <div className="aspect-video bg-gray-200 flex items-center justify-center">
-              <span className="text-gray-500 text-xl">
-                Hilary's Video Placeholder
-              </span>
-            </div>
-            <div className="p-5">
-              <h3 className="text-xl font-semibold text-gray-900">
-                Hilary Singing a Song
-              </h3>
-              <p className="text-sm text-gray-600 mt-2">
-                Uploaded by Mom • 32s
+          <div className="grid md:grid-cols-2 gap-12 items-start">
+            {/* HILARY PHOTO + TITLE */}
+
+            <div className="text-center">
+              <img
+                src={HilaryMainPhoto}
+                alt="Hilary smiling warmly"
+                className="w-48 h-48 md:w-64 md:h-64 rounded-full object-cover mx-auto mb-6 shadow-2xl border-8 border-pink-200"
+              />
+
+              <h1 className="text-5xl md:text-6xl font-bold text-pink-800 mb-4">
+                Hilary&apos;s Page 💕
+              </h1>
+
+              <p className="text-xl md:text-2xl text-gray-700 max-w-md mx-auto">
+                See what Hilary&apos;s been up to!
               </p>
             </div>
-          </div>
 
-          {/* Duplicate 4–6 times for demo */}
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition cursor-pointer">
-            <div className="aspect-video bg-gray-200 flex items-center justify-center">
-              <span className="text-gray-500 text-xl">
-                Another Hilary Moment
-              </span>
-            </div>
-            <div className="p-5">
-              <h3 className="text-xl font-semibold text-gray-900">
-                Hilary's Birthday Hello
-              </h3>
-              <p className="text-sm text-gray-600 mt-2">
-                From the Family • 45s
-              </p>
+            {/* FEATURED STORIES */}
+
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-pink-700 mb-6 text-center md:text-left">
+                Featured Videos
+              </h2>
+
+              {featuredVideos.length > 0 && (
+                <div className="flex gap-4 overflow-x-auto pb-2">
+                  {featuredVideos.slice(0, 3).map((video) => (
+                    <button
+                      key={video.id}
+                      onClick={() =>
+                        playVideo(
+                          video.playback_key || video.original_key,
+                          video.title,
+                        )
+                      }
+                      className="group shrink-0 w-40"
+                    >
+                      <div className="relative rounded-2xl overflow-hidden shadow-lg">
+                        <img
+                          src={videoThumbUrls[video.id]}
+                          alt=""
+                          className="w-full h-40 object-cover group-hover:scale-105 transition"
+                        />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-
-          {/* ... add more placeholders */}
         </div>
+
+        {loading && (
+          <div className="bg-white/75 backdrop-blur-sm rounded-3xl p-10 text-center shadow-lg">
+            <p className="text-xl text-gray-600">Loading…</p>
+          </div>
+        )}
+
+        {!loading && err && (
+          <div className="bg-red-100 border border-red-300 text-red-800 rounded-3xl p-6 text-center shadow-lg">
+            {err}
+          </div>
+        )}
+
+        {!loading && !err && (
+          <>
+            <section className="mb-16">
+              <div className="mb-6 text-center"></div>
+
+              {videos.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {regularVideos.map((v) => (
+                    <VideoCard
+                      key={v.id}
+                      video={v}
+                      thumbnailUrl={videoThumbUrls[v.id]}
+                      onPlay={() =>
+                        playVideo(v.playback_key || v.original_key, v.title)
+                      }
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white/75 backdrop-blur-sm rounded-3xl p-12 text-center shadow-lg">
+                  <p className="text-xl text-gray-600">
+                    No videos on Hilary&apos;s page yet 💕
+                  </p>
+                </div>
+              )}
+            </section>
+
+            <section>
+              <h2 className="text-3xl font-bold text-pink-700 text-center mb-6">
+                Photos
+              </h2>
+
+              {photos.length > 0 ? (
+                <div className="max-w-4xl mx-auto rounded-2xl overflow-hidden shadow-xl">
+                  <Swiper
+                    modules={[Pagination, Navigation, Autoplay]}
+                    slidesPerView={1}
+                    loop={photos.length > 1}
+                    autoplay={{ delay: 7000, disableOnInteraction: false }}
+                    pagination={{ clickable: true }}
+                    navigation
+                    className="h-[250px] md:h-[400px]"
+                  >
+                    {photos.map((p) => (
+                      <SwiperSlide key={p.id}>
+                        <div
+                          className="relative h-full w-full cursor-pointer"
+                          onClick={() => openPhotoViewer(p)}
+                        >
+                          {photoUrls[p.id] && !photoLoadFailed[p.id] ? (
+                            <img
+                              src={photoUrls[p.id]}
+                              alt={p.title || "Photo"}
+                              className="w-full h-full object-cover"
+                              onError={() => {
+                                setPhotoLoadFailed((prev) => ({
+                                  ...prev,
+                                  [p.id]: true,
+                                }));
+                              }}
+                            />
+                          ) : (
+                            <div className="absolute inset-0 bg-gradient-to-br from-pink-200 to-blue-200 flex items-center justify-center">
+                              <div className="text-center px-6">
+                                <div className="text-white text-xl font-semibold drop-shadow">
+                                  {p.title || "Photo"}
+                                </div>
+                                <div className="text-white/90 mt-2 drop-shadow">
+                                  {p.caption || ""}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </SwiperSlide>
+                    ))}
+                  </Swiper>
+                </div>
+              ) : (
+                <div className="bg-white/75 backdrop-blur-sm rounded-3xl p-12 text-center shadow-lg">
+                  <p className="text-xl text-gray-600">No photos yet 📸</p>
+                </div>
+              )}
+            </section>
+          </>
+        )}
 
         <div className="mt-16 text-center">
           <Link
             to="/upload"
-            className="inline-block bg-pink-500 text-white text-2xl font-semibold py-6 px-12 rounded-full shadow-xl hover:bg-pink-600 transition"
+            className="inline-block bg-purple-500 text-white text-2xl font-semibold py-6 px-12 rounded-full shadow-xl hover:bg-pink-400 transition"
           >
-            Add a Video for Hilary
+            Add a Hilary Moment 💖
           </Link>
         </div>
+
+        {photoViewerOpen && selectedPhoto && (
+          <div
+            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={closePhotoViewer}
+          >
+            <div
+              className="w-full max-w-4xl overflow-hidden rounded-[2rem] border-4 border-pink-200 bg-white shadow-[0_25px_80px_rgba(0,0,0,0.28)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between bg-gradient-to-r from-pink-100 via-rose-50 to-blue-100 px-5 py-4 border-b border-pink-100">
+                <div>
+                  <h3 className="text-xl font-bold text-pink-800">
+                    {selectedPhoto.title || "Photo"}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Uploaded by {selectedPhoto.display_name || "Unknown"}
+                  </p>
+                </div>
+
+                <button
+                  onClick={closePhotoViewer}
+                  className="rounded-full bg-gradient-to-r from-pink-500 to-rose-500 px-5 py-2.5 text-base font-bold text-white shadow-lg hover:scale-[1.02] transition"
+                >
+                  Close ✕
+                </button>
+              </div>
+
+              <div className="bg-black flex justify-center">
+                <img
+                  src={photoUrls[selectedPhoto.id]}
+                  alt={selectedPhoto.title || "Photo"}
+                  className="max-h-[70vh] w-auto object-contain"
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-pink-50 to-blue-50 px-5 py-4 border-t border-pink-100">
+                <div className="text-sm text-gray-700">
+                  {selectedPhoto.caption || "No description"}
+                </div>
+
+                <button
+                  onClick={() => setShowPhotoDeleteConfirm(true)}
+                  className="rounded-full bg-red-500 px-5 py-2.5 text-sm font-bold text-white shadow hover:bg-red-600 transition"
+                >
+                  Delete Photo
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <ConfirmModal
+          isOpen={showPhotoDeleteConfirm}
+          title="Delete this photo?"
+          confirmText="Delete"
+          cancelText="Cancel"
+          onConfirm={() => handleDeleteMedia(selectedPhoto.id)}
+          onCancel={() => setShowPhotoDeleteConfirm(false)}
+        />
+
+        <SuccessModal
+          isOpen={showPhotoDeleteSuccess}
+          title="Deleted"
+          message="The photo was deleted."
+          onClose={() => setShowPhotoDeleteSuccess(false)}
+        />
+
+        {playerOpen && (
+          <div
+            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={closePlayer}
+          >
+            <div
+              className="w-full max-w-5xl overflow-hidden rounded-[2rem] border-4 border-pink-200 bg-white shadow-[0_25px_80px_rgba(0,0,0,0.28)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between bg-gradient-to-r from-pink-100 via-rose-50 to-blue-100 px-5 py-4 border-b border-pink-100">
+                <div className="min-w-0">
+                  <h3 className="truncate text-xl font-bold text-pink-800">
+                    {playerTitle || "Hilary Video"}
+                  </h3>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closePlayer}
+                  className="ml-4 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-rose-500 px-5 py-2.5 text-base font-bold text-white shadow-lg hover:scale-[1.02] transition"
+                  aria-label="Close player"
+                >
+                  Close ✕
+                </button>
+              </div>
+
+              <div className="bg-black">
+                <video
+                  key={playerUrl}
+                  src={playerUrl}
+                  controls
+                  autoPlay
+                  playsInline
+                  preload="auto"
+                  onLoadedData={(e) => e.target.play()}
+                  className="w-full max-h-[74vh] bg-black object-contain"
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-pink-50 to-blue-50 px-5 py-4 border-t border-pink-100">
+                <div className="text-sm font-medium text-gray-600 text-center sm:text-left">
+                  Single video playback
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={closePlayer}
+                    className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 border border-gray-200 shadow-sm hover:bg-gray-50 transition"
+                  >
+                    Stop
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

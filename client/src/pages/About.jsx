@@ -15,7 +15,7 @@ import HilSmileInHall from "../assets/HilSmileInHall.jpg";
 const mainpic = HilSmileInHall;
 
 const benefits = [
-  "Sign in with a magic link to upload a short video saying hello to Hilary.",
+  "Email sheila@hello-hilary.com with a quick note asking for a sign-in password and we'll get you set up as a user and email you back your sign-in credentials.",
   "Hilary can watch your videos on her iPad with help — anytime, as many times as she likes.",
   "Over time, she'll have a growing collection of loving messages, songs, and stories.",
   "We also help Hilary upload her own videos so everyone can stay connected.",
@@ -42,17 +42,13 @@ const faqs = [
   {
     question: "How can I suggest improvements or new features?",
     answer:
-      "We'd love to hear from you! Email sheila at smcgov@11.11@gmail.com with ideas, feedback, or any technical notes (browser, device, etc.). Your input helps make the app even better for Hilary.",
+      "Please do! Email sheila@hello-hilary.com with ideas, feedback, or any technical notes (browser, device, etc.). Your input helps make the app even better for Hilary.",
   },
-  {
-    question: "Can I create a profile for someone not comfortable with tech?",
-    answer:
-      "Absolutely — with their permission! You can sign in/out as different users. Guest videos shared on your profile work too. Some of the sweetest contributions come from less tech-savvy folks.",
-  },
+
   {
     question: "What is my email used for?",
     answer:
-      "Only for magic-link sign-in (no passwords stored). No marketing emails or spam — ever. We may add gentle notifications for new videos in the future, but you control that.",
+      "No marketing emails or spam — ever. We may add gentle notifications for new videos in the future, but we're such a small group of users that I'm not going to even integrate any automated email systems.  If you hear from us via email, it's because we are just keeping you in the loop!",
   },
   {
     question: "Can I add this to my phone home screen?",
@@ -72,16 +68,32 @@ export default function About() {
             alt="Hilary smiling in the hallway"
             className="w-full max-w-sm lg:max-w-md rounded-3xl shadow-2xl object-cover border-8 border-pink-200"
           />
-          <div>
-            <h1 className="text-4xl md:text-5xl font-bold text-pink-800 mb-6">
+          <div className="space-y-6 font-[Nunito]">
+            <h1 className="text-4xl md:text-5xl font-bold text-pink-800">
               About Hello Hilary 💕
             </h1>
-            <p className="text-xl md:text-xl text-gray-700 leading-relaxed">
+
+            <p className="text-xl text-gray-700 leading-relaxed">
               If you've been invited to the Hello Hilary app, it's because you
               are someone special in Hilary's life. Even if you haven't seen her
               in a while, she still has fond memories of you! Please help us
               shine some light into her world and drop in once in a while and
               say Hello!
+            </p>
+
+            <p className="text-xl text-gray-700 leading-relaxed">
+              If you are part of Hilary's support circle, I am so grateful for
+              all that you do to help her live her best life. As her family who
+              can't always be there in person, it would really warm our hearts
+              to see her involved in fun activities or just a random hello from
+              her from time to time. We're hoping you can upload photos and
+              videos that will be on Hilary's page by choosing "Post to Hilary's
+              Page" when you upload.
+            </p>
+
+            <p className="text-xl text-gray-700 leading-relaxed">
+              Think of this as a window for us to share our lives with Hilary
+              while you help us see Hilary's life at home or at programs.
             </p>
           </div>
         </div>

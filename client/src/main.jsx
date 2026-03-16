@@ -7,8 +7,10 @@ import Home from "./pages/Home";
 import Gallery from "./pages/Gallery";
 import SignIn from "./pages/SignIn";
 import Upload from "./pages/Upload";
-import About from "./pages/About"; // ← New
-import Hilary from "./pages/Hilary"; // ← New
+import About from "./pages/About";
+import Hilary from "./pages/Hilary";
+import AdminMedia from "./pages/AdminMedia";
+import Footer from "./components/Footer";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -22,6 +24,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route path="/upload" element={<Upload />} />
           <Route path="/about" element={<About />} />
           <Route path="/hilary" element={<Hilary />} />
+          <Route path="/admin" element={<AdminMedia />} />
 
           {/* 404 fallback */}
           <Route
@@ -47,6 +50,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           />
         </Route>
       </Routes>
+      <Footer />
     </BrowserRouter>
   </React.StrictMode>,
 );
