@@ -256,20 +256,6 @@ export default function Gallery() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [playerOpen]);
 
-  useEffect(() => {
-    if (!playlistActive) return;
-    if (!playlist.length) return;
-
-    const current = playlist[playlistIndex];
-    if (!current) return;
-
-    playVideo(
-      current.playback_key || current.original_key,
-      current.title,
-      videoThumbUrls[current.id] || "",
-    );
-  }, [playlistActive, playlist, playlistIndex, videoThumbUrls]);
-
   const photos = useMemo(
     () => media.filter((m) => m.media_type === "photo"),
     [media],
@@ -351,6 +337,37 @@ export default function Gallery() {
     setVideoLoading(false);
     setPlaylistActive(false);
   };
+
+  const playVideo = async (key, title, poster = "") => {
+    try {
+      setVideoLoading(true);
+      const res = await fetch(
+        `/api/s3/presign-download?key=${encodeURIComponent(key)}`,
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Failed to get video URL");
+      if (!data?.url) throw new Error("No URL returned");
+      setPlayerUrl(data.url);
+      setPlayerTitle(title || "Hilary Video");
+      setPlayerPoster(poster || "");
+      setPlayerOpen(true);
+    } catch (e) {
+      setVideoLoading(false);
+      alert(e.message || "Could not play video");
+    }
+  };
+
+  useEffect(() => {
+    if (!playlistActive) return;
+    if (!playlist.length) return;
+    const current = playlist[playlistIndex];
+    if (!current) return;
+    playVideo(
+      current.playback_key || current.original_key,
+      current.title,
+      videoThumbUrls[current.id] || "",
+    );
+  }, [playlistActive, playlist, playlistIndex, videoThumbUrls]);
 
   const openPhotoViewer = (photo) => {
     const index = photos.findIndex((p) => p.id === photo.id);

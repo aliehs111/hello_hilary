@@ -156,6 +156,20 @@ export default function Hilary() {
     }
   };
 
+  useEffect(() => {
+    if (!playlistActive) return;
+    if (!playlist.length) return;
+
+    const current = playlist[playlistIndex];
+    if (!current) return;
+
+    playVideo(
+      current.playback_key || current.original_key,
+      current.title,
+      videoThumbUrls[current.id] || "",
+    );
+  }, [playlistActive, playlist, playlistIndex, videoThumbUrls]);
+
   const closePlayer = () => {
     setPlayerOpen(false);
     setPlayerUrl("");
