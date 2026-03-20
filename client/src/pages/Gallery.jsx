@@ -1,5 +1,5 @@
 // src/pages/Gallery.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Navigation, Autoplay } from "swiper/modules";
 import "swiper/css";
@@ -76,6 +76,8 @@ export default function Gallery() {
   const [showPhotoDeleteConfirm, setShowPhotoDeleteConfirm] = useState(false);
   const [showPhotoDeleteSuccess, setShowPhotoDeleteSuccess] = useState(false);
   const [showVideoDeleteSuccess, setShowVideoDeleteSuccess] = useState(false);
+
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingVideo, setEditingVideo] = useState(null);
@@ -351,37 +353,59 @@ export default function Gallery() {
   };
 
   const openPhotoViewer = (photo) => {
+    const index = photos.findIndex((p) => p.id === photo.id);
     setSelectedPhoto(photo);
+    setSelectedPhotoIndex(index);
     setPhotoViewerOpen(true);
   };
 
   const closePhotoViewer = () => {
     setSelectedPhoto(null);
+    setSelectedPhotoIndex(null);
     setPhotoViewerOpen(false);
     setShowPhotoDeleteConfirm(false);
   };
 
-  const playVideo = async (key, title, poster = "") => {
-    try {
-      setVideoLoading(true);
+  const goToNextPhoto = () => {
+    if (!photos.length || selectedPhotoIndex === null) return;
 
-      const res = await fetch(
-        `/api/s3/presign-download?key=${encodeURIComponent(key)}`,
-      );
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) throw new Error(data?.error || "Failed to get video URL");
-      if (!data?.url) throw new Error("No URL returned");
-
-      setPlayerUrl(data.url);
-      setPlayerTitle(title || "Hello Video");
-      setPlayerPoster(poster || "");
-      setPlayerOpen(true);
-    } catch (e) {
-      setVideoLoading(false);
-      alert(e.message || "Could not play video");
-    }
+    const nextIndex = (selectedPhotoIndex + 1) % photos.length;
+    setSelectedPhotoIndex(nextIndex);
+    setSelectedPhoto(photos[nextIndex]);
   };
+
+  const goToPreviousPhoto = () => {
+    if (!photos.length || selectedPhotoIndex === null) return;
+
+    const prevIndex = (selectedPhotoIndex - 1 + photos.length) % photos.length;
+    setSelectedPhotoIndex(prevIndex);
+    setSelectedPhoto(photos[prevIndex]);
+  };
+
+  const goToNextRef = useRef(goToNextPhoto);
+  const goToPrevRef = useRef(goToPreviousPhoto);
+  const closeViewerRef = useRef(closePhotoViewer);
+
+  useEffect(() => {
+    goToNextRef.current = goToNextPhoto;
+  }, [goToNextPhoto]);
+  useEffect(() => {
+    goToPrevRef.current = goToPreviousPhoto;
+  }, [goToPreviousPhoto]);
+  useEffect(() => {
+    closeViewerRef.current = closePhotoViewer;
+  }, [closePhotoViewer]);
+
+  useEffect(() => {
+    if (!photoViewerOpen) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") closeViewerRef.current?.();
+      if (e.key === "ArrowRight") goToNextRef.current?.();
+      if (e.key === "ArrowLeft") goToPrevRef.current?.();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [photoViewerOpen]);
 
   const handleDeleteVideo = async (id) => {
     try {
@@ -579,18 +603,18 @@ export default function Gallery() {
                 <div className="text-center md:text-left">
                   <button
                     onClick={refreshGallery}
-                    className="rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
+                    className="inline-flex items-center gap-2 rounded-full border border-pink-200 bg-white/90 px-4 py-2 text-sm font-semibold text-pink-700 shadow-sm transition hover:bg-pink-50"
                   >
                     ↻ Refresh Gallery
                   </button>
 
-                  <p className="text-lg font-semibold text-pink-700">
+                  <p className="mt-3 text-lg font-semibold text-pink-700">
                     Showing {filteredVideos.length} video
                     {filteredVideos.length === 1 ? "" : "s"}
                   </p>
                 </div>
 
-                {activeFilterCount > 0 && (
+                {activeFilterCount > 0 ? (
                   <div className="flex flex-col items-center gap-3 sm:flex-row">
                     <label className="text-sm font-medium text-gray-700">
                       Play for
@@ -616,6 +640,16 @@ export default function Gallery() {
                       ▶ Play These Videos
                     </button>
                   </div>
+                ) : (
+                  <div className="flex justify-center md:justify-end">
+                    <a
+                      href="#photos"
+                      className="inline-flex items-center gap-2 rounded-full border border-pink-200 bg-white/90 px-4 py-2 text-sm font-semibold text-pink-700 shadow-sm transition hover:bg-pink-50"
+                    >
+                      Go to Photos
+                      <span aria-hidden="true">↓</span>
+                    </a>
+                  </div>
                 )}
               </div>
 
@@ -639,7 +673,7 @@ export default function Gallery() {
               </div>
             </section>
 
-            <section>
+            <section id="photos" className="scroll-mt-24">
               <h2 className="mb-6 text-center text-3xl font-bold text-pink-700">
                 Photos
               </h2>
@@ -653,19 +687,19 @@ export default function Gallery() {
                     autoplay={{ delay: 7000, disableOnInteraction: false }}
                     pagination={{ clickable: true }}
                     navigation
-                    className="h-[250px] md:h-[400px]"
+                    className="h-[360px] sm:h-[420px] md:h-[520px]"
                   >
-                    {photos.map((p) => (
+                    {photos.map((p, index) => (
                       <SwiperSlide key={p.id}>
                         <div
-                          className="relative h-full w-full cursor-pointer"
+                          className="relative h-full w-full cursor-pointer bg-black"
                           onClick={() => openPhotoViewer(p)}
                         >
                           {photoUrls[p.id] && !photoLoadFailed[p.id] ? (
                             <img
                               src={photoUrls[p.id]}
                               alt={p.title || "Photo"}
-                              className="h-full w-full object-cover"
+                              className="h-full w-full object-cover object-top"
                               onError={(e) => {
                                 setPhotoLoadFailed((prev) => ({
                                   ...prev,
@@ -743,7 +777,25 @@ export default function Gallery() {
                 </button>
               </div>
 
-              <div className="flex justify-center bg-black">
+              <div className="relative flex justify-center bg-black">
+                {photos.length > 1 && (
+                  <>
+                    <button
+                      onClick={goToPreviousPhoto}
+                      className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/85 px-4 py-2 text-xl font-bold text-pink-700 shadow-lg transition hover:bg-white"
+                    >
+                      ‹
+                    </button>
+
+                    <button
+                      onClick={goToNextPhoto}
+                      className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/85 px-4 py-2 text-xl font-bold text-pink-700 shadow-lg transition hover:bg-white"
+                    >
+                      ›
+                    </button>
+                  </>
+                )}
+
                 <img
                   src={photoUrls[selectedPhoto.id]}
                   alt={selectedPhoto.title || "Photo"}

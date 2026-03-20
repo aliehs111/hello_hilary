@@ -1,17 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Pagination, Navigation, Autoplay } from "swiper/modules";
+import { Pagination, Autoplay } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
-import "swiper/css/navigation";
+import PhotoLightbox from "@/components/PhotoLightbox";
 
 import HilaryMainPhoto from "../assets/HilPeach.jpg";
-import SparkleOverlay from "../components/SparkleOverlay";
+import FallingHeartsOverlay from "../components/FallingHeartsOverlay";
 import VideoCard from "@/components/VideoCard";
 import ConfirmModal from "@/components/ConfirmModal";
 import SuccessModal from "@/components/SuccessModal";
-
 import VideoPlayerModal from "@/components/VideoPlayerModal";
 
 export default function Hilary() {
@@ -30,11 +29,13 @@ export default function Hilary() {
   const [playerPoster, setPlayerPoster] = useState("");
 
   const [photoViewerOpen, setPhotoViewerOpen] = useState(false);
-  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
 
   const [showPhotoDeleteConfirm, setShowPhotoDeleteConfirm] = useState(false);
   const [showPhotoDeleteSuccess, setShowPhotoDeleteSuccess] = useState(false);
   const [showVideoDeleteSuccess, setShowVideoDeleteSuccess] = useState(false);
+
+  const photoSwiperRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,7 +51,9 @@ export default function Hilary() {
         if (!res.ok) throw new Error(data?.error || "Failed to load media");
 
         const mediaItems = data.media || [];
-        if (!cancelled) setMedia(mediaItems);
+        if (cancelled) return;
+
+        setMedia(mediaItems);
 
         const photosOnly = mediaItems.filter((m) => m.media_type === "photo");
         const videosOnly = mediaItems.filter((m) => m.media_type === "video");
@@ -89,14 +92,18 @@ export default function Hilary() {
           }),
         );
 
-        if (!cancelled) {
-          setPhotoUrls(Object.fromEntries(photoEntries));
-          setVideoThumbUrls(Object.fromEntries(videoThumbEntries));
-        }
+        if (cancelled) return;
+
+        setPhotoUrls(Object.fromEntries(photoEntries));
+        setVideoThumbUrls(Object.fromEntries(videoThumbEntries));
       } catch (e) {
-        if (!cancelled) setErr(e.message || "Failed to load media");
+        if (!cancelled) {
+          setErr(e.message || "Failed to load media");
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
@@ -157,14 +164,25 @@ export default function Hilary() {
     setVideoLoading(false);
   };
 
-  const openPhotoViewer = (photo) => {
-    setSelectedPhoto(photo);
+  const openPhotoViewer = (index) => {
+    setSelectedPhotoIndex(index);
     setPhotoViewerOpen(true);
   };
 
   const closePhotoViewer = () => {
-    setSelectedPhoto(null);
+    setSelectedPhotoIndex(null);
     setPhotoViewerOpen(false);
+    setShowPhotoDeleteConfirm(false);
+  };
+
+  const goToNextPhoto = () => {
+    if (!photos.length || selectedPhotoIndex === null) return;
+    setSelectedPhotoIndex((prev) => (prev + 1) % photos.length);
+  };
+
+  const goToPreviousPhoto = () => {
+    if (!photos.length || selectedPhotoIndex === null) return;
+    setSelectedPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length);
   };
 
   const handleDeleteVideo = async (id) => {
@@ -187,6 +205,42 @@ export default function Hilary() {
     }
   };
 
+  const handleDeletePhoto = async (id) => {
+    if (!id) return;
+
+    try {
+      const res = await fetch(`/api/media/${id}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Delete failed");
+      }
+
+      setMedia((prev) => prev.filter((m) => m.id !== id));
+
+      setPhotoUrls((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+
+      setPhotoLoadFailed((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+
+      setShowPhotoDeleteConfirm(false);
+      closePhotoViewer();
+      setShowPhotoDeleteSuccess(true);
+    } catch (e) {
+      alert(e.message || "Failed to delete photo");
+    }
+  };
+
   useEffect(() => {
     if (!playerOpen) return;
 
@@ -199,42 +253,39 @@ export default function Hilary() {
   }, [playerOpen]);
 
   return (
-    <div className="min-h-screen pt-20 px-4 sm:px-6 pb-16 bg-gradient-to-b from-pink-50 to-blue-50">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-b from-pink-50 to-blue-50 px-4 pb-16 pt-20 sm:px-6">
+      <FallingHeartsOverlay count={14} />
+
+      <div className="mx-auto max-w-7xl">
         <div className="relative mb-16">
-          <SparkleOverlay count={14} />
-
-          <div className="grid md:grid-cols-2 gap-12 items-start">
-            {/* HILARY PHOTO + TITLE */}
-
+          <div className="grid items-start gap-12 md:grid-cols-2">
             <div className="text-center">
               <img
                 src={HilaryMainPhoto}
                 alt="Hilary smiling warmly"
-                className="w-48 h-48 md:w-64 md:h-64 rounded-full object-cover mx-auto mb-6 shadow-2xl border-8 border-pink-200"
+                className="mx-auto mb-6 h-48 w-48 rounded-full border-8 border-pink-200 object-cover shadow-2xl md:h-64 md:w-64"
               />
 
-              <h1 className="text-5xl md:text-6xl font-bold text-pink-800 mb-4">
+              <h1 className="mb-4 text-5xl font-bold text-pink-800 md:text-6xl">
                 Hilary&apos;s Page 💕
               </h1>
 
-              <p className="text-xl md:text-2xl text-gray-700 max-w-md mx-auto">
+              <p className="mx-auto max-w-md text-xl text-gray-700 md:text-2xl">
                 See what Hilary&apos;s been up to!
               </p>
             </div>
 
-            {/* FEATURED VIDEOS */}
-
             <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-pink-700 mb-6 text-center md:text-left">
+              <h2 className="mb-6 text-center text-2xl font-bold text-pink-700 md:text-left md:text-3xl">
                 Featured Videos
               </h2>
 
               {featuredVideos.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                   {featuredVideos.map((video) => (
                     <button
                       key={video.id}
+                      type="button"
                       onClick={() =>
                         playVideo(
                           video.playback_key || video.original_key,
@@ -244,11 +295,11 @@ export default function Hilary() {
                       }
                       className="group w-full"
                     >
-                      <div className="relative rounded-2xl overflow-hidden shadow-lg">
+                      <div className="relative overflow-hidden rounded-2xl shadow-lg">
                         <img
                           src={videoThumbUrls[video.id]}
                           alt={video.title || "Featured video"}
-                          className="w-full h-32 sm:h-40 object-cover group-hover:scale-105 transition"
+                          className="h-32 w-full object-cover transition group-hover:scale-105 sm:h-40"
                         />
                       </div>
                     </button>
@@ -259,14 +310,24 @@ export default function Hilary() {
           </div>
         </div>
 
+        <div className="mb-10 flex justify-center md:justify-end">
+          <a
+            href="#photos"
+            className="inline-flex items-center gap-2 rounded-full border border-pink-200 bg-white/90 px-4 py-2 text-sm font-semibold text-pink-700 shadow-sm transition hover:bg-pink-50"
+          >
+            Go to Photos
+            <span aria-hidden="true">↓</span>
+          </a>
+        </div>
+
         {loading && (
-          <div className="bg-white/75 backdrop-blur-sm rounded-3xl p-10 text-center shadow-lg">
+          <div className="rounded-3xl bg-white/75 p-10 text-center shadow-lg backdrop-blur-sm">
             <p className="text-xl text-gray-600">Loading…</p>
           </div>
         )}
 
         {!loading && err && (
-          <div className="bg-red-100 border border-red-300 text-red-800 rounded-3xl p-6 text-center shadow-lg">
+          <div className="rounded-3xl border border-red-300 bg-red-100 p-6 text-center text-red-800 shadow-lg">
             {err}
           </div>
         )}
@@ -274,10 +335,8 @@ export default function Hilary() {
         {!loading && !err && (
           <>
             <section className="mb-16">
-              <div className="mb-6 text-center"></div>
-
               {regularVideos.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
                   {regularVideos.map((v) => (
                     <VideoCard
                       key={v.id}
@@ -295,7 +354,7 @@ export default function Hilary() {
                   ))}
                 </div>
               ) : (
-                <div className="bg-white/75 backdrop-blur-sm rounded-3xl p-12 text-center shadow-lg">
+                <div className="rounded-3xl bg-white/75 p-12 text-center shadow-lg backdrop-blur-sm">
                   <p className="text-xl text-gray-600">
                     No videos on Hilary&apos;s page yet 💕
                   </p>
@@ -303,59 +362,89 @@ export default function Hilary() {
               )}
             </section>
 
-            <section>
-              <h2 className="text-3xl font-bold text-pink-700 text-center mb-6">
+            <section id="photos" className="scroll-mt-24">
+              <h2 className="mb-6 text-center text-3xl font-bold text-pink-700">
                 Photos
               </h2>
 
               {photos.length > 0 ? (
-                <div className="max-w-4xl mx-auto rounded-2xl overflow-hidden shadow-xl">
-                  <Swiper
-                    modules={[Pagination, Navigation, Autoplay]}
-                    slidesPerView={1}
-                    loop={photos.length > 1}
-                    autoplay={{ delay: 7000, disableOnInteraction: false }}
-                    pagination={{ clickable: true }}
-                    navigation
-                    className="h-[250px] md:h-[400px]"
-                  >
-                    {photos.map((p) => (
-                      <SwiperSlide key={p.id}>
-                        <div
-                          className="relative h-full w-full cursor-pointer"
-                          onClick={() => openPhotoViewer(p)}
-                        >
-                          {photoUrls[p.id] && !photoLoadFailed[p.id] ? (
-                            <img
-                              src={photoUrls[p.id]}
-                              alt={p.title || "Photo"}
-                              className="w-full h-full object-cover"
-                              onError={() => {
-                                setPhotoLoadFailed((prev) => ({
-                                  ...prev,
-                                  [p.id]: true,
-                                }));
-                              }}
-                            />
-                          ) : (
-                            <div className="absolute inset-0 bg-gradient-to-br from-pink-200 to-blue-200 flex items-center justify-center">
-                              <div className="text-center px-6">
-                                <div className="text-white text-xl font-semibold drop-shadow">
-                                  {p.title || "Photo"}
-                                </div>
-                                <div className="text-white/90 mt-2 drop-shadow">
-                                  {p.caption || ""}
+                <div className="mx-auto max-w-5xl">
+                  <div className="relative overflow-hidden rounded-3xl bg-black shadow-2xl">
+                    <Swiper
+                      modules={[Pagination, Autoplay]}
+                      onSwiper={(swiper) => {
+                        photoSwiperRef.current = swiper;
+                      }}
+                      slidesPerView={1}
+                      loop={photos.length > 1}
+                      autoplay={
+                        photos.length > 1
+                          ? { delay: 7000, disableOnInteraction: false }
+                          : false
+                      }
+                      pagination={
+                        photos.length > 1 ? { clickable: true } : false
+                      }
+                      className="h-[360px] sm:h-[430px] md:h-[540px]"
+                    >
+                      {photos.map((p, index) => (
+                        <SwiperSlide key={p.id}>
+                          <div
+                            className="relative h-full w-full cursor-pointer bg-black"
+                            onClick={() => openPhotoViewer(index)}
+                          >
+                            {photoUrls[p.id] && !photoLoadFailed[p.id] ? (
+                              <img
+                                src={photoUrls[p.id]}
+                                alt={p.title || "Photo"}
+                                className="h-full w-full object-contain"
+                                onError={() => {
+                                  setPhotoLoadFailed((prev) => ({
+                                    ...prev,
+                                    [p.id]: true,
+                                  }));
+                                }}
+                              />
+                            ) : (
+                              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-pink-200 to-blue-200">
+                                <div className="px-6 text-center">
+                                  <div className="text-xl font-semibold text-white drop-shadow">
+                                    {p.title || "Photo"}
+                                  </div>
+                                  <div className="mt-2 text-white/90 drop-shadow">
+                                    {p.caption || ""}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          )}
-                        </div>
-                      </SwiperSlide>
-                    ))}
-                  </Swiper>
+                            )}
+                          </div>
+                        </SwiperSlide>
+                      ))}
+                    </Swiper>
+
+                    {photos.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => photoSwiperRef.current?.slidePrev()}
+                          className="absolute left-4 top-1/2 z-[100] -translate-y-1/2 rounded-full bg-white px-5 py-3 text-3xl font-bold text-pink-700 shadow-2xl"
+                        >
+                          ‹
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => photoSwiperRef.current?.slideNext()}
+                          className="absolute right-4 top-1/2 z-[100] -translate-y-1/2 rounded-full bg-white px-5 py-3 text-3xl font-bold text-pink-700 shadow-2xl"
+                        >
+                          ›
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               ) : (
-                <div className="bg-white/75 backdrop-blur-sm rounded-3xl p-12 text-center shadow-lg">
+                <div className="rounded-3xl bg-white/75 p-12 text-center shadow-lg backdrop-blur-sm">
                   <p className="text-xl text-gray-600">No photos yet 📸</p>
                 </div>
               )}
@@ -366,69 +455,32 @@ export default function Hilary() {
         <div className="mt-16 text-center">
           <Link
             to="/upload"
-            className="inline-block bg-purple-500 text-white text-2xl font-semibold py-6 px-12 rounded-full shadow-xl hover:bg-pink-400 transition"
+            className="inline-block rounded-full bg-purple-500 px-12 py-6 text-2xl font-semibold text-white shadow-xl transition hover:bg-pink-400"
           >
             Add a Hilary Moment 💖
           </Link>
         </div>
 
-        {photoViewerOpen && selectedPhoto && (
-          <div
-            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
-            onClick={closePhotoViewer}
-          >
-            <div
-              className="w-full max-w-4xl overflow-hidden rounded-[2rem] border-4 border-pink-200 bg-white shadow-[0_25px_80px_rgba(0,0,0,0.28)]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between bg-gradient-to-r from-pink-100 via-rose-50 to-blue-100 px-5 py-4 border-b border-pink-100">
-                <div>
-                  <h3 className="text-xl font-bold text-pink-800">
-                    {selectedPhoto.title || "Photo"}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    Uploaded by {selectedPhoto.display_name || "Unknown"}
-                  </p>
-                </div>
-
-                <button
-                  onClick={closePhotoViewer}
-                  className="rounded-full bg-gradient-to-r from-pink-500 to-rose-500 px-5 py-2.5 text-base font-bold text-white shadow-lg hover:scale-[1.02] transition"
-                >
-                  Close ✕
-                </button>
-              </div>
-
-              <div className="bg-black flex justify-center">
-                <img
-                  src={photoUrls[selectedPhoto.id]}
-                  alt={selectedPhoto.title || "Photo"}
-                  className="max-h-[70vh] w-auto object-contain"
-                />
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-pink-50 to-blue-50 px-5 py-4 border-t border-pink-100">
-                <div className="text-sm text-gray-700">
-                  {selectedPhoto.caption || "No description"}
-                </div>
-
-                <button
-                  onClick={() => setShowPhotoDeleteConfirm(true)}
-                  className="rounded-full bg-red-500 px-5 py-2.5 text-sm font-bold text-white shadow hover:bg-red-600 transition"
-                >
-                  Delete Photo
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <PhotoLightbox
+          isOpen={photoViewerOpen}
+          photos={photos}
+          selectedIndex={selectedPhotoIndex}
+          photoUrls={photoUrls}
+          onClose={closePhotoViewer}
+          onPrev={goToPreviousPhoto}
+          onNext={goToNextPhoto}
+          showDelete={true}
+          onDelete={(id) => {
+            setShowPhotoDeleteConfirm(true);
+          }}
+        />
 
         <ConfirmModal
           isOpen={showPhotoDeleteConfirm}
           title="Delete this photo?"
           confirmText="Delete"
           cancelText="Cancel"
-          onConfirm={() => handleDeleteMedia(selectedPhoto.id)}
+          onConfirm={() => handleDeletePhoto(photos[selectedPhotoIndex]?.id)}
           onCancel={() => setShowPhotoDeleteConfirm(false)}
         />
 
