@@ -438,8 +438,8 @@ export default function Gallery() {
     }
   };
 
-  const handleVideoEnd = () => {
-    if (!playlistActive) return;
+  const advancePlaylist = () => {
+    if (!playlistActive || playlist.length === 0) return;
 
     if (playlistEndTime && Date.now() > playlistEndTime) {
       setPlaylistActive(false);
@@ -456,6 +456,27 @@ export default function Gallery() {
     }
 
     setPlaylistIndex(nextIndex);
+  };
+
+  const handleVideoEnd = () => {
+    advancePlaylist();
+  };
+
+  const handleNextVideo = () => {
+    advancePlaylist();
+  };
+
+  const goToPrevious = () => {
+    if (!playlistActive || playlist.length === 0) return;
+
+    let prevIndex = playlistIndex - 1;
+
+    if (prevIndex < 0) {
+      // wrap to end
+      prevIndex = playlist.length - 1;
+    }
+
+    setPlaylistIndex(prevIndex);
   };
 
   const handlePlayAll = () => {
@@ -775,13 +796,19 @@ export default function Gallery() {
           url={playerUrl}
           poster={playerPoster}
           videoLoading={videoLoading}
+          playlistActive={playlistActive}
+          playlistIndex={playlistIndex}
+          playlistLength={playlist.length}
           onClose={closePlayer}
           onLoadedData={(e) => {
             setVideoLoading(false);
             e.currentTarget.play().catch(() => {});
           }}
           onEnded={handleVideoEnd}
+          onNext={handleNextVideo}
+          onPrev={goToPrevious}
         />
+
         <EditVideoModal
           isOpen={showEditModal}
           video={editingVideo}

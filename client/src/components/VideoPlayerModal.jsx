@@ -1,4 +1,5 @@
-// src/components/VideoPlayerModal.jsx
+import { useEffect, useRef, useState } from "react";
+
 export default function VideoPlayerModal({
   isOpen,
   title,
@@ -11,8 +12,34 @@ export default function VideoPlayerModal({
   onClose,
   onLoadedData,
   onEnded,
+  onNext,
+  onPrev,
 }) {
+  const videoRef = useRef(null);
+  const [isPaused, setIsPaused] = useState(false);
+
+  useEffect(() => {
+    setIsPaused(false);
+  }, [url]);
+
   if (!isOpen) return null;
+
+  const handlePauseToggle = async () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.paused) {
+      try {
+        await video.play();
+        setIsPaused(false);
+      } catch {
+        // ignore autoplay/play interruption errors
+      }
+    } else {
+      video.pause();
+      setIsPaused(true);
+    }
+  };
 
   return (
     <div
@@ -55,6 +82,7 @@ export default function VideoPlayerModal({
           )}
 
           <video
+            ref={videoRef}
             key={url}
             src={url}
             poster={poster}
@@ -72,17 +100,41 @@ export default function VideoPlayerModal({
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-pink-50 to-blue-50 px-5 py-4 border-t border-pink-100">
           <div className="text-sm font-medium text-gray-600 text-center sm:text-left">
-            {playlistActive ? "Playlist is running" : "Single video playback"}
+            {isPaused
+              ? "Playback paused"
+              : playlistActive
+                ? "Playlist is running"
+                : "Single video playback"}
           </div>
 
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handlePauseToggle}
               className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 border border-gray-200 shadow-sm hover:bg-gray-50 transition"
             >
-              Stop
+              {isPaused ? "Resume ▶" : "Pause ❚❚"}
             </button>
+
+            {playlistActive && playlistLength > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={onPrev}
+                  className="rounded-full bg-gradient-to-r from-indigo-500 to-blue-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg transition hover:scale-[1.02]"
+                >
+                  ◀ Previous
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onNext}
+                  className="rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg transition hover:scale-[1.02]"
+                >
+                  Next ▶
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

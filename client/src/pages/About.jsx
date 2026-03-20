@@ -18,7 +18,7 @@ const benefits = [
   "Email sheila@hello-hilary.com with a quick note asking for a sign-in password and we'll get you set up as a user and email you back your sign-in credentials.",
   "Hilary can watch your videos on her iPad with help — anytime, as many times as she likes.",
   "Over time, she'll have a growing collection of loving messages, songs, and stories.",
-  "We also help Hilary upload her own videos so everyone can stay connected.",
+  "We also help Hilary upload her own videos to the Hilary's page so everyone can see what she's up to!",
   "Ideas: Just say hello! Sing a song, share your day, show your pets — the point is to remind Hilary that you're thinking of her and to entertain her.",
   "This is a private app made just for Hilary — please keep it within her circle of family and friends.",
 ];
@@ -27,7 +27,7 @@ const faqs = [
   {
     question: "Who will see my videos?",
     answer:
-      "Primarily Hilary, of course! Videos are stored securely and only accessible within the app to registered users who care about her. It's a loving community brought together through our connection to Hilary.",
+      "Primarily Hilary, of course! Videos are stored securely and only accessible within the app to registered users who care about her. All the uploaders are people who are connected to Hilary in some way — family, friends, caregivers. The idea is to create a safe and loving space for Hilary to enjoy videos from people who care about her.",
   },
   {
     question: "Can I delete my videos?",
@@ -48,7 +48,7 @@ const faqs = [
   {
     question: "What is my email used for?",
     answer:
-      "No marketing emails or spam — ever. I might send out little reminders or announcements for new videos, but we're such a small group of users that I'm not going to automate any emails or anything crazy.  If you do not want to receive any emails, just let me know!",
+      "No marketing emails or spam, of course. I might send out little reminders or announcements for new videos, but we're such a small group of users that I'm not going to automate any emails or anything crazy.  If you do not want to receive any emails, just let me know!",
   },
   {
     question: "Can I add this to my phone home screen?",
@@ -74,26 +74,29 @@ export default function About() {
             </h1>
 
             <p className="text-xl text-gray-700 leading-relaxed">
-              If you've been invited to the Hello Hilary app, it's because you
-              are someone special in Hilary's life. Even if you haven't seen her
-              in a while, she still has fond memories of you! Please help us
-              shine some light into her world and drop in once in a while and
-              say Hello!
+              <span className="text-pink-600 font-semibold">
+                Thank you for being someone special in Hilary’s life 💕
+              </span>{" "}
+              If you've been invited to Hello Hilary, it's because you can make
+              a difference in Hilary's life by adding thoughtful and
+              entertaining videos for her to watch. Even if you haven't seen her
+              in a while, with just a simple “hello” can brighten her day more
+              than you know. Please drop in whenever you can — your presence
+              truly makes a difference.💕
             </p>
 
             <p className="text-xl text-gray-700 leading-relaxed">
-              If you are part of Hilary's support circle, I am so grateful for
-              all that you do to help her live her best life! As her family who
-              can't always be there in person, it would really warm our hearts
-              to see her involved in fun activities or just a random hello from
-              her from time to time. We're hoping you can upload photos and
-              videos that will be on Hilary's page by choosing "Post to Hilary's
-              Page" when you upload.
-            </p>
-
-            <p className="text-xl text-gray-700 leading-relaxed">
-              Think of this as a window for us to share our lives with Hilary
-              while you help us see Hilary's life at home or at program.
+              <span className="text-pink-600 font-semibold">
+                To the amazing people who care for Hilary each day, Thank you!
+              </span>{" "}
+              We are so grateful for the kindness, patience, and support you
+              give her every day. As her family, we can’t always be there in
+              person, so it means so much to see her smiling, engaged, and
+              enjoying moments throughout her day. If you're able, we would love
+              for you to share photos or short videos by selecting “Post to
+              Hilary’s Page” when uploading. Plus if you have any personal
+              videos of music, nature, your pets or your kids that you think
+              would entertain Hilary please add those too! 💕
             </p>
           </div>
         </div>

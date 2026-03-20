@@ -19,10 +19,10 @@ export default function Home() {
           Hello Hilary 💕
         </h1>
 
-        <p className="mb-10 max-w-2xl text-xl leading-relaxed text-gray-700 md:text-3xl">
+        {/* <p className="mb-10 max-w-2xl text-xl leading-relaxed text-gray-700 md:text-3xl">
           Upload videos for Hilary to watch in the gallery, and visit Hilary’s
           page to see her latest videos and photos.
-        </p>
+        </p> */}
 
         <div className="grid w-full max-w-2xl grid-cols-1 gap-4 sm:grid-cols-3">
           <Link to="/hilary" className={primaryLinkClass}>
@@ -38,12 +38,12 @@ export default function Home() {
           </Link>
         </div>
 
-        <Link
+        {/* <Link
           to="/signin"
           className="mt-8 text-lg font-medium text-blue-600 transition hover:underline"
         >
           Sign in
-        </Link>
+        </Link> */}
       </div>
     </main>
   );

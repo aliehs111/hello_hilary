@@ -223,7 +223,7 @@ export default function Hilary() {
               </p>
             </div>
 
-            {/* FEATURED STORIES */}
+            {/* FEATURED VIDEOS */}
 
             <div>
               <h2 className="text-2xl md:text-3xl font-bold text-pink-700 mb-6 text-center md:text-left">

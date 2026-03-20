@@ -4,7 +4,11 @@ export default function AdminMedia() {
   const [media, setMedia] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
-  const [view, setView] = useState("featured");
+  const [view, setView] = useState("all");
+  const [uploaderSearch, setUploaderSearch] = useState("");
+  const [titleSearch, setTitleSearch] = useState("");
+  const [dateFilter, setDateFilter] = useState("any");
+  const [mediaTypeFilter, setMediaTypeFilter] = useState("all");
 
   useEffect(() => {
     loadMedia();
@@ -70,12 +74,52 @@ export default function AdminMedia() {
   let filteredMedia = media;
 
   if (view === "featured") {
-    filteredMedia = media.filter((m) => m.is_featured);
+    filteredMedia = filteredMedia.filter((m) => m.is_featured);
   } else if (view === "hilary") {
-    filteredMedia = media.filter((m) => m.is_hilary_page);
-  } else if (view === "all") {
-    filteredMedia = media;
+    filteredMedia = filteredMedia.filter((m) => m.is_hilary_page);
   }
+
+  if (uploaderSearch.trim()) {
+    const q = uploaderSearch.trim().toLowerCase();
+    filteredMedia = filteredMedia.filter((m) =>
+      (m.display_name || "").toLowerCase().includes(q),
+    );
+  }
+
+  if (titleSearch.trim()) {
+    const q = titleSearch.trim().toLowerCase();
+    filteredMedia = filteredMedia.filter((m) =>
+      (m.title || "").toLowerCase().includes(q),
+    );
+  }
+
+  if (dateFilter !== "any") {
+    const now = new Date();
+
+    filteredMedia = filteredMedia.filter((m) => {
+      if (!m.created_at) return false;
+
+      const createdAt = new Date(m.created_at);
+      const diffMs = now - createdAt;
+      const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+      if (dateFilter === "today") return diffDays <= 1;
+      if (dateFilter === "week") return diffDays <= 7;
+      if (dateFilter === "month") return diffDays <= 30;
+
+      return true;
+    });
+  }
+
+  if (mediaTypeFilter !== "all") {
+    filteredMedia = filteredMedia.filter(
+      (m) => m.media_type === mediaTypeFilter,
+    );
+  }
+
+  filteredMedia = [...filteredMedia].sort(
+    (a, b) => new Date(b.created_at) - new Date(a.created_at),
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-blue-50 px-6 pt-20 pb-12">
@@ -85,20 +129,98 @@ export default function AdminMedia() {
             Admin Media CMS ⚙️
           </h1>
           <p className="mt-3 text-lg text-gray-600">
-            Manage featured stories, Hilary page media, and cleanup.
+            Manage featured videos, Hilary page media, and cleanup.
           </p>
         </div>
 
-        <div className="flex justify-end mb-6">
-          <select
-            value={view}
-            onChange={(e) => setView(e.target.value)}
-            className="border border-gray-300 rounded-lg px-4 py-2 text-sm shadow-sm bg-white"
+        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap">
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                View
+              </label>
+              <select
+                value={view}
+                onChange={(e) => setView(e.target.value)}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm shadow-sm"
+              >
+                <option value="featured">Featured Videos</option>
+                <option value="hilary">Hilary Page</option>
+                <option value="all">All Media</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Uploader
+              </label>
+              <input
+                type="text"
+                value={uploaderSearch}
+                onChange={(e) => setUploaderSearch(e.target.value)}
+                placeholder="Search uploader"
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm shadow-sm"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Title
+              </label>
+              <input
+                type="text"
+                value={titleSearch}
+                onChange={(e) => setTitleSearch(e.target.value)}
+                placeholder="Search title"
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm shadow-sm"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Date
+              </label>
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm shadow-sm"
+              >
+                <option value="any">Any time</option>
+                <option value="today">Today</option>
+                <option value="week">Last 7 days</option>
+                <option value="month">Last 30 days</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Type
+              </label>
+              <select
+                value={mediaTypeFilter}
+                onChange={(e) => setMediaTypeFilter(e.target.value)}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm shadow-sm"
+              >
+                <option value="all">All</option>
+                <option value="video">Videos</option>
+                <option value="photo">Photos</option>
+              </select>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setView("all");
+              setUploaderSearch("");
+              setTitleSearch("");
+              setDateFilter("any");
+              setMediaTypeFilter("all");
+            }}
+            className="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
           >
-            <option value="featured">Featured Stories</option>
-            <option value="hilary">Hilary Page</option>
-            <option value="all">All Media</option>
-          </select>
+            Clear Filters
+          </button>
         </div>
 
         {loading && (
@@ -145,19 +267,15 @@ export default function AdminMedia() {
                       {item.display_name || "Unknown"}
                     </td>
 
-                    <td className="px-4 py-4 text-gray-700">
-                      {item.media_type}
-                    </td>
-
                     <td className="px-4 py-4">
                       <span
-                        className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                          item.is_hilary_page
-                            ? "bg-pink-100 text-pink-800"
-                            : "bg-gray-100 text-gray-700"
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+                          item.media_type === "video"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-green-100 text-green-800"
                         }`}
                       >
-                        {item.is_hilary_page ? "Yes" : "No"}
+                        {item.media_type === "video" ? "🎬 Video" : "📸 Photo"}
                       </span>
                     </td>
 
@@ -165,10 +283,24 @@ export default function AdminMedia() {
                       <button
                         onClick={() =>
                           updateMedia(item.id, {
+                            is_hilary_page: !item.is_hilary_page,
+                          })
+                        }
+                        className={`rounded-full px-4 py-2 text-xs font-bold transition ${
+                          item.is_hilary_page
+                            ? "bg-pink-500 text-white hover:bg-pink-600"
+                            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        }`}
+                      >
+                        {item.is_hilary_page ? "Yes" : "No"}
+                      </button>
+                    </td>
+
+                    <td className="px-4 py-4">
+                      <button
+                        onClick={() =>
+                          updateMedia(item.id, {
                             is_featured: !item.is_featured,
-                            ...(item.is_featured
-                              ? {}
-                              : { is_hilary_page: true }),
                           })
                         }
                         className={`rounded-full px-4 py-2 text-xs font-bold transition ${
