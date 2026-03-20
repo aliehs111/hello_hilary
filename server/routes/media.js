@@ -16,6 +16,7 @@ const s3 = new S3Client({
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
 });
+
 router.get("/", async (req, res) => {
   try {
     const { uploader, media_type, categories, q, hilary_page } = req.query;
@@ -278,10 +279,18 @@ router.post("/:id/failed", async (req, res) => {
 });
 
 // PATCH /api/media/:id
+// PATCH /api/media/:id
 router.patch("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { is_featured, is_hidden, is_hilary_page, title, caption } = req.body;
+    const {
+      is_featured,
+      is_hidden,
+      is_hilary_page,
+      title,
+      caption,
+      categories,
+    } = req.body;
 
     const fields = [];
     const values = [];
@@ -310,6 +319,11 @@ router.patch("/:id", async (req, res) => {
     if (typeof caption === "string") {
       fields.push(`caption = $${idx++}`);
       values.push(caption.trim() || null);
+    }
+
+    if (Array.isArray(categories)) {
+      fields.push(`categories = $${idx++}::text[]`);
+      values.push(categories);
     }
 
     if (fields.length === 0) {

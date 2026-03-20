@@ -12,6 +12,8 @@ import VideoCard from "@/components/VideoCard";
 import ConfirmModal from "@/components/ConfirmModal";
 import SuccessModal from "@/components/SuccessModal";
 
+import VideoPlayerModal from "@/components/VideoPlayerModal";
+
 export default function Hilary() {
   const [media, setMedia] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +34,7 @@ export default function Hilary() {
 
   const [showPhotoDeleteConfirm, setShowPhotoDeleteConfirm] = useState(false);
   const [showPhotoDeleteSuccess, setShowPhotoDeleteSuccess] = useState(false);
+  const [showVideoDeleteSuccess, setShowVideoDeleteSuccess] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -164,7 +167,7 @@ export default function Hilary() {
     setPhotoViewerOpen(false);
   };
 
-  const handleDeleteMedia = async (id) => {
+  const handleDeleteVideo = async (id) => {
     try {
       const res = await fetch(`/api/media/${id}`, {
         method: "DELETE",
@@ -177,11 +180,10 @@ export default function Hilary() {
       }
 
       setMedia((prev) => prev.filter((m) => m.id !== id));
-      setShowPhotoDeleteConfirm(false);
-      closePhotoViewer();
-      setShowPhotoDeleteSuccess(true);
+      setShowVideoDeleteSuccess(true);
     } catch (e) {
-      alert(e.message || "Failed to delete media");
+      alert(e.message || "Failed to delete video");
+      throw e;
     }
   };
 
@@ -288,6 +290,7 @@ export default function Hilary() {
                           videoThumbUrls[v.id] || "",
                         )
                       }
+                      onDelete={handleDeleteVideo}
                     />
                   ))}
                 </div>
@@ -436,77 +439,25 @@ export default function Hilary() {
           onClose={() => setShowPhotoDeleteSuccess(false)}
         />
 
-        {playerOpen && (
-          <div
-            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
-            onClick={closePlayer}
-          >
-            <div
-              className="w-full max-w-5xl overflow-hidden rounded-[2rem] border-4 border-pink-200 bg-white shadow-[0_25px_80px_rgba(0,0,0,0.28)]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between bg-gradient-to-r from-pink-100 via-rose-50 to-blue-100 px-5 py-4 border-b border-pink-100">
-                <div className="min-w-0">
-                  <h3 className="truncate text-xl font-bold text-pink-800">
-                    {playerTitle || "Hilary Video"}
-                  </h3>
-                </div>
+        <SuccessModal
+          isOpen={showVideoDeleteSuccess}
+          title="Deleted"
+          message="The video was deleted."
+          onClose={() => setShowVideoDeleteSuccess(false)}
+        />
 
-                <button
-                  type="button"
-                  onClick={closePlayer}
-                  className="ml-4 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-rose-500 px-5 py-2.5 text-base font-bold text-white shadow-lg hover:scale-[1.02] transition"
-                  aria-label="Close player"
-                >
-                  Close ✕
-                </button>
-              </div>
-
-              <div className="relative bg-black flex items-center justify-center min-h-[300px]">
-                {videoLoading && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-black">
-                    <div className="text-white text-sm font-semibold animate-pulse">
-                      Loading video...
-                    </div>
-                  </div>
-                )}
-
-                <video
-                  key={playerUrl}
-                  src={playerUrl}
-                  poster={playerPoster}
-                  controls={false}
-                  autoPlay
-                  playsInline
-                  preload="auto"
-                  onLoadedData={(e) => {
-                    setVideoLoading(false);
-                    e.currentTarget.play().catch(() => {});
-                  }}
-                  className={`w-full max-h-[74vh] bg-black object-contain transition-opacity duration-200 ${
-                    videoLoading ? "opacity-0" : "opacity-100"
-                  }`}
-                />
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-pink-50 to-blue-50 px-5 py-4 border-t border-pink-100">
-                <div className="text-sm font-medium text-gray-600 text-center sm:text-left">
-                  Single video playback
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={closePlayer}
-                    className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 border border-gray-200 shadow-sm hover:bg-gray-50 transition"
-                  >
-                    Stop
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <VideoPlayerModal
+          isOpen={playerOpen}
+          title={playerTitle}
+          url={playerUrl}
+          poster={playerPoster}
+          videoLoading={videoLoading}
+          onClose={closePlayer}
+          onLoadedData={(e) => {
+            setVideoLoading(false);
+            e.currentTarget.play().catch(() => {});
+          }}
+        />
       </div>
     </div>
   );

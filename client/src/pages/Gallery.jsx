@@ -5,12 +5,43 @@ import { Pagination, Navigation, Autoplay } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 import "swiper/css/navigation";
+
 import HelloHilaryLogo192 from "@/assets/HelloHilaryLogo192.png";
 import VideoCard from "@/components/VideoCard";
 import FilterPanel from "@/components/FilterPanel";
-
 import ConfirmModal from "@/components/ConfirmModal";
 import SuccessModal from "@/components/SuccessModal";
+import VideoPlayerModal from "@/components/VideoPlayerModal";
+import { MEDIA_CATEGORIES } from "@/constants/mediaCategories";
+import EditVideoModal from "@/components/EditVideoModal";
+
+const VIBES = [
+  {
+    name: "Cheer Her Up",
+    categories: ["Funny", "Animals", "Singing"],
+    duration: 900,
+  },
+  {
+    name: "Relaxing",
+    categories: ["Just a Hello", "Reading a Book", "Nature"],
+    duration: 1200,
+  },
+  {
+    name: "Animal Friends",
+    categories: ["Animals"],
+    duration: 600,
+  },
+  {
+    name: "Music Time",
+    categories: ["Music Performance", "Singing"],
+    duration: 900,
+  },
+  {
+    name: "Family Memories",
+    categories: ["Memories", "Babies and Little People"],
+    duration: 1200,
+  },
+];
 
 export default function Gallery() {
   const [media, setMedia] = useState([]);
@@ -25,6 +56,7 @@ export default function Gallery() {
   const [playerUrl, setPlayerUrl] = useState("");
   const [playerTitle, setPlayerTitle] = useState("");
   const [playerPoster, setPlayerPoster] = useState("");
+  const [videoLoading, setVideoLoading] = useState(false);
 
   const [playlist, setPlaylist] = useState([]);
   const [playlistIndex, setPlaylistIndex] = useState(0);
@@ -32,7 +64,6 @@ export default function Gallery() {
   const [playlistEndTime, setPlaylistEndTime] = useState(null);
 
   const [duration, setDuration] = useState(1800);
-
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -44,7 +75,72 @@ export default function Gallery() {
 
   const [showPhotoDeleteConfirm, setShowPhotoDeleteConfirm] = useState(false);
   const [showPhotoDeleteSuccess, setShowPhotoDeleteSuccess] = useState(false);
-  const [videoLoading, setVideoLoading] = useState(false);
+  const [showVideoDeleteSuccess, setShowVideoDeleteSuccess] = useState(false);
+
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingVideo, setEditingVideo] = useState(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false); // <-- ADD THIS
+  const [editForm, setEditForm] = useState({
+    title: "",
+    caption: "",
+    categories: [],
+  });
+
+  const handleOpenEdit = (video) => {
+    setEditingVideo(video);
+    setEditForm({
+      title: video.title || "",
+      caption: video.caption || "",
+      categories: video.categories || [],
+    });
+    setShowEditModal(true);
+  };
+
+  const handleCloseEdit = () => {
+    setShowEditModal(false);
+    setEditingVideo(null);
+    setEditForm({
+      title: "",
+      caption: "",
+      categories: [],
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingVideo) return;
+
+    try {
+      setIsSavingEdit(true);
+
+      const res = await fetch(`/api/media/${editingVideo.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: editForm.title,
+          caption: editForm.caption,
+          categories: editForm.categories,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to update media");
+      }
+
+      setMedia((prev) =>
+        prev.map((m) => (m.id === editingVideo.id ? data.media : m)),
+      );
+
+      handleCloseEdit();
+    } catch (e) {
+      alert(e.message || "Failed to save changes");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -69,14 +165,18 @@ export default function Gallery() {
         }
 
         const url = `/api/media${params.toString() ? `?${params.toString()}` : ""}`;
-
         const res = await fetch(url);
         const data = await res.json().catch(() => ({}));
 
-        if (!res.ok) throw new Error(data?.error || "Failed to load media");
+        if (!res.ok) {
+          throw new Error(data?.error || "Failed to load media");
+        }
 
         const mediaItems = data.media || [];
-        if (!cancelled) setMedia(mediaItems);
+
+        if (cancelled) return;
+
+        setMedia(mediaItems);
 
         const photosOnly = mediaItems.filter((m) => m.media_type === "photo");
         const videosOnly = mediaItems.filter((m) => m.media_type === "video");
@@ -85,7 +185,9 @@ export default function Gallery() {
           photosOnly.map(async (p) => {
             try {
               const urlRes = await fetch(
-                `/api/s3/presign-download?key=${encodeURIComponent(p.original_key)}`,
+                `/api/s3/presign-download?key=${encodeURIComponent(
+                  p.original_key,
+                )}`,
               );
               const urlData = await urlRes.json().catch(() => ({}));
 
@@ -103,7 +205,9 @@ export default function Gallery() {
               if (!v.thumbnail_key) return [v.id, null];
 
               const urlRes = await fetch(
-                `/api/s3/presign-download?key=${encodeURIComponent(v.thumbnail_key)}`,
+                `/api/s3/presign-download?key=${encodeURIComponent(
+                  v.thumbnail_key,
+                )}`,
               );
               const urlData = await urlRes.json().catch(() => ({}));
 
@@ -115,14 +219,18 @@ export default function Gallery() {
           }),
         );
 
-        if (!cancelled) {
-          setPhotoUrls(Object.fromEntries(photoEntries));
-          setVideoThumbUrls(Object.fromEntries(videoThumbEntries));
-        }
+        if (cancelled) return;
+
+        setPhotoUrls(Object.fromEntries(photoEntries));
+        setVideoThumbUrls(Object.fromEntries(videoThumbEntries));
       } catch (e) {
-        if (!cancelled) setErr(e.message || "Failed to load media");
+        if (!cancelled) {
+          setErr(e.message || "Failed to load media");
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
@@ -132,6 +240,33 @@ export default function Gallery() {
       cancelled = true;
     };
   }, [selectedCategories, uploader, dateRange]);
+
+  useEffect(() => {
+    if (!playerOpen) return;
+
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        closePlayer();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [playerOpen]);
+
+  useEffect(() => {
+    if (!playlistActive) return;
+    if (!playlist.length) return;
+
+    const current = playlist[playlistIndex];
+    if (!current) return;
+
+    playVideo(
+      current.playback_key || current.original_key,
+      current.title,
+      videoThumbUrls[current.id] || "",
+    );
+  }, [playlistActive, playlist, playlistIndex, videoThumbUrls]);
 
   const photos = useMemo(
     () => media.filter((m) => m.media_type === "photo"),
@@ -153,6 +288,7 @@ export default function Gallery() {
         uploader === "all" || (v.display_name || "").trim() === uploader;
 
       let matchesDate = true;
+
       if (dateRange !== "any") {
         const createdAt = new Date(v.created_at);
         const now = new Date();
@@ -176,15 +312,19 @@ export default function Gallery() {
     return ["all", ...names];
   }, [videos]);
 
-  const startRandomVibe = () => {
-    const vibe = VIBES[Math.floor(Math.random() * VIBES.length)];
+  const shuffleVideos = (items) => {
+    const arr = [...items];
 
-    setSelectedCategories(vibe.categories);
-    setDuration(vibe.duration);
+    for (let i = arr.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
 
-    setTimeout(() => {
-      handlePlayAll();
-    }, 50);
+    return arr;
+  };
+
+  const refreshGallery = () => {
+    window.location.reload();
   };
 
   const toggleCategory = (category) => {
@@ -205,8 +345,8 @@ export default function Gallery() {
     setPlayerOpen(false);
     setPlayerUrl("");
     setPlayerTitle("");
-
-    // stop playlist session if user closes player
+    setPlayerPoster("");
+    setVideoLoading(false);
     setPlaylistActive(false);
   };
 
@@ -218,53 +358,8 @@ export default function Gallery() {
   const closePhotoViewer = () => {
     setSelectedPhoto(null);
     setPhotoViewerOpen(false);
+    setShowPhotoDeleteConfirm(false);
   };
-
-  const handleDeleteMedia = async (id) => {
-    try {
-      const res = await fetch(`/api/media/${id}`, {
-        method: "DELETE",
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Delete failed");
-      }
-
-      setMedia((prev) => prev.filter((m) => m.id !== id));
-      setShowPhotoDeleteConfirm(false);
-      closePhotoViewer();
-      setShowPhotoDeleteSuccess(true);
-    } catch (e) {
-      alert(e.message || "Failed to delete media");
-    }
-  };
-
-  useEffect(() => {
-    if (!playerOpen) return;
-
-    const onKeyDown = (e) => {
-      if (e.key === "Escape") closePlayer();
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [playerOpen]);
-
-  useEffect(() => {
-    if (!playlistActive) return;
-    if (!playlist.length) return;
-
-    const current = playlist[playlistIndex];
-    if (!current) return;
-
-    playVideo(
-      current.playback_key || current.original_key,
-      current.title,
-      videoThumbUrls[current.id] || "",
-    );
-  }, [playlistActive, playlist, playlistIndex, videoThumbUrls]);
 
   const playVideo = async (key, title, poster = "") => {
     try {
@@ -288,23 +383,64 @@ export default function Gallery() {
     }
   };
 
-  const refreshGallery = () => {
-    window.location.reload();
+  const handleDeleteVideo = async (id) => {
+    try {
+      const res = await fetch(`/api/media/${id}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Delete failed");
+      }
+
+      setMedia((prev) => prev.filter((m) => m.id !== id));
+      setShowVideoDeleteSuccess(true);
+    } catch (e) {
+      alert(e.message || "Failed to delete video");
+      throw e;
+    }
   };
 
-  const shuffleVideos = (items) => {
-    const arr = [...items];
-    for (let i = arr.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
+  const handleDeletePhoto = async (id) => {
+    if (!id) return;
+
+    try {
+      const res = await fetch(`/api/media/${id}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Delete failed");
+      }
+
+      setMedia((prev) => prev.filter((m) => m.id !== id));
+      setPhotoUrls((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      setPhotoLoadFailed((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+
+      setShowPhotoDeleteConfirm(false);
+      setPhotoViewerOpen(false);
+      setSelectedPhoto(null);
+      setShowPhotoDeleteSuccess(true);
+    } catch (e) {
+      alert(e.message || "Failed to delete photo");
     }
-    return arr;
   };
 
   const handleVideoEnd = () => {
     if (!playlistActive) return;
 
-    // stop if session time expired
     if (playlistEndTime && Date.now() > playlistEndTime) {
       setPlaylistActive(false);
       closePlayer();
@@ -313,7 +449,6 @@ export default function Gallery() {
 
     let nextIndex = playlistIndex + 1;
 
-    // if we reached the end, reshuffle and start again
     if (nextIndex >= playlist.length) {
       const reshuffled = shuffleVideos(playlist);
       setPlaylist(reshuffled);
@@ -323,39 +458,10 @@ export default function Gallery() {
     setPlaylistIndex(nextIndex);
   };
 
-  const VIBES = [
-    {
-      name: "Cheer Her Up",
-      categories: ["Funny", "Animals", "Singing"],
-      duration: 900, // 15 minutes
-    },
-    {
-      name: "Relaxing",
-      categories: ["Just a Hello", "Reading a Book", "Nature"],
-      duration: 1200, // 20 minutes
-    },
-    {
-      name: "Animal Friends",
-      categories: ["Animals"],
-      duration: 600, // 10 minutes
-    },
-    {
-      name: "Music Time",
-      categories: ["Music Performance", "Singing"],
-      duration: 900,
-    },
-    {
-      name: "Family Memories",
-      categories: ["Memories", "Babies and Little People"],
-      duration: 1200,
-    },
-  ];
-
   const handlePlayAll = () => {
     if (videos.length === 0) return;
 
     const shuffled = shuffleVideos(videos);
-
     setPlaylist(shuffled);
     setPlaylistIndex(0);
     setPlaylistActive(true);
@@ -366,11 +472,21 @@ export default function Gallery() {
     if (filteredVideos.length === 0) return;
 
     const shuffled = shuffleVideos(filteredVideos);
-
     setPlaylist(shuffled);
     setPlaylistIndex(0);
     setPlaylistActive(true);
     setPlaylistEndTime(Date.now() + duration * 1000);
+  };
+
+  const startRandomVibe = () => {
+    const vibe = VIBES[Math.floor(Math.random() * VIBES.length)];
+
+    setSelectedCategories(vibe.categories);
+    setDuration(vibe.duration);
+
+    setTimeout(() => {
+      handlePlayAll();
+    }, 50);
   };
 
   const activeFilterCount =
@@ -379,24 +495,24 @@ export default function Gallery() {
     (dateRange !== "any" ? 1 : 0);
 
   return (
-    <div className="min-h-screen pt-10 px-6 pb-16 bg-gradient-to-b from-pink-50 to-blue-50">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-b from-pink-50 to-blue-50 px-6 pb-16 pt-10">
+      <div className="mx-auto max-w-7xl">
         <section className="mb-8">
           <div className="text-center">
-            <h1 className="text-5xl md:text-6xl font-bold text-pink-700">
+            <h1 className="text-5xl font-bold text-pink-700 md:text-6xl">
               Hello Hilary 💕
             </h1>
           </div>
         </section>
 
         {loading && (
-          <div className="bg-white/75 backdrop-blur-sm rounded-3xl p-10 text-center shadow-lg">
+          <div className="rounded-3xl bg-white/75 p-10 text-center shadow-lg backdrop-blur-sm">
             <p className="text-xl text-gray-600">Loading…</p>
           </div>
         )}
 
         {!loading && err && (
-          <div className="bg-red-100 border border-red-300 text-red-800 rounded-3xl p-6 text-center shadow-lg">
+          <div className="rounded-3xl border border-red-300 bg-red-100 p-6 text-center text-red-800 shadow-lg">
             {err}
           </div>
         )}
@@ -405,30 +521,31 @@ export default function Gallery() {
           <>
             <section className="mb-10">
               <div className="text-center">
-                <div className="flex flex-col sm:flex-row justify-center gap-4">
+                <div className="flex flex-col justify-center gap-4 sm:flex-row">
                   <button
                     onClick={handlePlayAll}
-                    className="w-full sm:w-auto bg-gradient-to-r from-pink-500 to-rose-500 text-white text-lg md:text-xl font-bold px-6 md:px-8 py-3 md:py-4 rounded-full shadow-lg hover:scale-[1.02] transition"
+                    className="w-full rounded-full bg-gradient-to-r from-pink-500 to-rose-500 px-6 py-3 text-lg font-bold text-white shadow-lg transition hover:scale-[1.02] sm:w-auto md:px-8 md:py-4 md:text-xl"
                   >
                     ▶ Play All Videos
                   </button>
 
                   <button
                     onClick={() => setFiltersOpen(true)}
-                    className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-lg md:text-xl font-bold px-6 md:px-8 py-3 md:py-4 rounded-full shadow-lg hover:scale-[1.02] transition"
+                    className="w-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-3 text-lg font-bold text-white shadow-lg transition hover:scale-[1.02] sm:w-auto md:px-8 md:py-4 md:text-xl"
                   >
                     🔎 Choose Filters
                   </button>
                 </div>
-                <div className="flex justify-center mt-8">
+
+                <div className="mt-8 flex justify-center">
                   <button
                     onClick={startRandomVibe}
-                    className="flex items-center justify-center gap-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg md:text-xl font-bold px-6 md:px-8 py-3 md:py-4 rounded-full shadow-lg hover:scale-[1.02] transition"
+                    className="flex items-center justify-center gap-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-lg font-bold text-white shadow-lg transition hover:scale-[1.02] md:px-8 md:py-4 md:text-xl"
                   >
                     <img
                       src={HelloHilaryLogo192}
                       alt="Doddy"
-                      className="w-8 h-8"
+                      className="h-8 w-8"
                     />
                     Let Doddy Pick the Reels!
                   </button>
@@ -437,11 +554,11 @@ export default function Gallery() {
             </section>
 
             <section className="mb-16">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+              <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="text-center md:text-left">
                   <button
                     onClick={refreshGallery}
-                    className="px-4 py-2 rounded-full border border-gray-300 text-sm font-semibold text-gray-600 hover:bg-gray-100 transition"
+                    className="rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
                   >
                     ↻ Refresh Gallery
                   </button>
@@ -453,7 +570,7 @@ export default function Gallery() {
                 </div>
 
                 {activeFilterCount > 0 && (
-                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                  <div className="flex flex-col items-center gap-3 sm:flex-row">
                     <label className="text-sm font-medium text-gray-700">
                       Play for
                     </label>
@@ -473,14 +590,15 @@ export default function Gallery() {
                     <button
                       onClick={handlePlayFiltered}
                       disabled={filteredVideos.length === 0}
-                      className="rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-bold px-6 py-3 shadow-lg hover:scale-[1.01] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-3 font-bold text-white shadow-lg transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       ▶ Play These Videos
                     </button>
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+
+              <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredVideos.map((v) => (
                   <VideoCard
                     key={v.id}
@@ -493,18 +611,20 @@ export default function Gallery() {
                         videoThumbUrls[v.id] || "",
                       )
                     }
+                    onDelete={handleDeleteVideo}
+                    onEdit={handleOpenEdit}
                   />
                 ))}
               </div>
             </section>
 
             <section>
-              <h2 className="text-3xl font-bold text-pink-700 text-center mb-6">
+              <h2 className="mb-6 text-center text-3xl font-bold text-pink-700">
                 Photos
               </h2>
 
               {photos.length > 0 ? (
-                <div className="max-w-4xl mx-auto rounded-2xl overflow-hidden shadow-xl">
+                <div className="mx-auto max-w-4xl overflow-hidden rounded-2xl shadow-xl">
                   <Swiper
                     modules={[Pagination, Navigation, Autoplay]}
                     slidesPerView={1}
@@ -524,7 +644,7 @@ export default function Gallery() {
                             <img
                               src={photoUrls[p.id]}
                               alt={p.title || "Photo"}
-                              className="w-full h-full object-cover"
+                              className="h-full w-full object-cover"
                               onError={(e) => {
                                 setPhotoLoadFailed((prev) => ({
                                   ...prev,
@@ -537,12 +657,12 @@ export default function Gallery() {
                               }}
                             />
                           ) : (
-                            <div className="absolute inset-0 bg-gradient-to-br from-pink-200 to-blue-200 flex items-center justify-center">
-                              <div className="text-center px-6">
-                                <div className="text-white text-xl font-semibold drop-shadow">
+                            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-pink-200 to-blue-200">
+                              <div className="px-6 text-center">
+                                <div className="text-xl font-semibold text-white drop-shadow">
                                   {p.title || "Photo"}
                                 </div>
-                                <div className="text-white/90 mt-2 drop-shadow">
+                                <div className="mt-2 text-white/90 drop-shadow">
                                   {p.caption || ""}
                                 </div>
                               </div>
@@ -554,7 +674,7 @@ export default function Gallery() {
                   </Swiper>
                 </div>
               ) : (
-                <div className="bg-white/75 backdrop-blur-sm rounded-3xl p-12 text-center shadow-lg">
+                <div className="rounded-3xl bg-white/75 p-12 text-center shadow-lg backdrop-blur-sm">
                   <p className="text-xl text-gray-600">No photos yet 📸</p>
                 </div>
               )}
@@ -577,14 +697,14 @@ export default function Gallery() {
 
         {photoViewerOpen && selectedPhoto && (
           <div
-            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
             onClick={closePhotoViewer}
           >
             <div
               className="w-full max-w-4xl overflow-hidden rounded-[2rem] border-4 border-pink-200 bg-white shadow-[0_25px_80px_rgba(0,0,0,0.28)]"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between bg-gradient-to-r from-pink-100 via-rose-50 to-blue-100 px-5 py-4 border-b border-pink-100">
+              <div className="flex items-center justify-between border-b border-pink-100 bg-gradient-to-r from-pink-100 via-rose-50 to-blue-100 px-5 py-4">
                 <div>
                   <h3 className="text-xl font-bold text-pink-800">
                     {selectedPhoto.title || "Photo"}
@@ -596,13 +716,13 @@ export default function Gallery() {
 
                 <button
                   onClick={closePhotoViewer}
-                  className="rounded-full bg-gradient-to-r from-pink-500 to-rose-500 px-5 py-2.5 text-base font-bold text-white shadow-lg hover:scale-[1.02] transition"
+                  className="rounded-full bg-gradient-to-r from-pink-500 to-rose-500 px-5 py-2.5 text-base font-bold text-white shadow-lg transition hover:scale-[1.02]"
                 >
                   Close ✕
                 </button>
               </div>
 
-              <div className="bg-black flex justify-center">
+              <div className="flex justify-center bg-black">
                 <img
                   src={photoUrls[selectedPhoto.id]}
                   alt={selectedPhoto.title || "Photo"}
@@ -610,14 +730,14 @@ export default function Gallery() {
                 />
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-pink-50 to-blue-50 px-5 py-4 border-t border-pink-100">
+              <div className="flex flex-col items-center justify-between gap-3 border-t border-pink-100 bg-gradient-to-r from-pink-50 to-blue-50 px-5 py-4 sm:flex-row">
                 <div className="text-sm text-gray-700">
                   {selectedPhoto.caption || "No description"}
                 </div>
 
                 <button
                   onClick={() => setShowPhotoDeleteConfirm(true)}
-                  className="rounded-full bg-red-500 px-5 py-2.5 text-sm font-bold text-white shadow hover:bg-red-600 transition"
+                  className="rounded-full bg-red-500 px-5 py-2.5 text-sm font-bold text-white shadow transition hover:bg-red-600"
                 >
                   Delete Photo
                 </button>
@@ -626,13 +746,12 @@ export default function Gallery() {
           </div>
         )}
 
-        {/* PHOTO DELETE CONFIRM MODAL */}
         <ConfirmModal
           isOpen={showPhotoDeleteConfirm}
           title="Delete this photo?"
           confirmText="Delete"
           cancelText="Cancel"
-          onConfirm={() => handleDeleteMedia(selectedPhoto.id)}
+          onConfirm={() => handleDeletePhoto(selectedPhoto?.id)}
           onCancel={() => setShowPhotoDeleteConfirm(false)}
         />
 
@@ -643,83 +762,36 @@ export default function Gallery() {
           onClose={() => setShowPhotoDeleteSuccess(false)}
         />
 
-        {playerOpen && (
-          <div
-            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
-            onClick={closePlayer}
-          >
-            <div
-              className="w-full max-w-5xl overflow-hidden rounded-[2rem] border-4 border-pink-200 bg-white shadow-[0_25px_80px_rgba(0,0,0,0.28)]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between bg-gradient-to-r from-pink-100 via-rose-50 to-blue-100 px-5 py-4 border-b border-pink-100">
-                <div className="min-w-0">
-                  <h3 className="truncate text-xl font-bold text-pink-800">
-                    {playerTitle || "Hello Video"}
-                  </h3>
-                  {playlistActive && playlist.length > 0 && (
-                    <p className="text-sm font-medium text-gray-600">
-                      Video {playlistIndex + 1} of {playlist.length}
-                    </p>
-                  )}
-                </div>
+        <SuccessModal
+          isOpen={showVideoDeleteSuccess}
+          title="Deleted"
+          message="The video was deleted."
+          onClose={() => setShowVideoDeleteSuccess(false)}
+        />
 
-                <button
-                  type="button"
-                  onClick={closePlayer}
-                  className="ml-4 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-rose-500 px-5 py-2.5 text-base font-bold text-white shadow-lg hover:scale-[1.02] transition"
-                  aria-label="Close player"
-                >
-                  Close ✕
-                </button>
-              </div>
-
-              <div className="bg-black">
-                <video
-                  key={playerUrl}
-                  src={playerUrl}
-                  poster={playerPoster}
-                  controls={false}
-                  autoPlay
-                  playsInline
-                  preload="auto"
-                  onLoadedData={(e) => {
-                    setVideoLoading(false);
-                    e.currentTarget.play().catch(() => {});
-                  }}
-                  onEnded={handleVideoEnd}
-                  className={`w-full max-h-[74vh] bg-black object-contain transition-opacity duration-200 ${
-                    videoLoading ? "opacity-0" : "opacity-100"
-                  }`}
-                />
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-pink-50 to-blue-50 px-5 py-4 border-t border-pink-100">
-                <div className="text-sm font-medium text-gray-600 text-center sm:text-left">
-                  {playlistActive
-                    ? "Playlist is running"
-                    : "Single video playback"}
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={closePlayer}
-                    className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 border border-gray-200 shadow-sm hover:bg-gray-50 transition"
-                  >
-                    Stop
-                  </button>
-                  <button
-                    onClick={() => setShowConfirm(true)}
-                    className="rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-red-600 transition"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <VideoPlayerModal
+          isOpen={playerOpen}
+          title={playerTitle}
+          url={playerUrl}
+          poster={playerPoster}
+          videoLoading={videoLoading}
+          onClose={closePlayer}
+          onLoadedData={(e) => {
+            setVideoLoading(false);
+            e.currentTarget.play().catch(() => {});
+          }}
+          onEnded={handleVideoEnd}
+        />
+        <EditVideoModal
+          isOpen={showEditModal}
+          video={editingVideo}
+          formData={editForm}
+          setFormData={setEditForm}
+          onClose={handleCloseEdit}
+          onSave={handleSaveEdit}
+          isSaving={isSavingEdit}
+          categoryOptions={MEDIA_CATEGORIES}
+        />
       </div>
     </div>
   );

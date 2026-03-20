@@ -1,19 +1,19 @@
 // src/pages/Upload.jsx
 import { useMemo, useState } from "react";
 import ConfettiBurst from "../components/ConfettiBurst";
-
-const MEDIA_CATEGORIES = [
-  "Just a Hello",
-  "Animals",
-  "Memories",
-  "Music Performance",
-  "Singing",
-  "Babies and Little People",
-  "Reading a Book",
-  "Nature",
-  "Funny",
-  "Creative",
-];
+import { MEDIA_CATEGORIES } from "@/constants/mediaCategories";
+// const MEDIA_CATEGORIES = [
+//   "Just a Hello",
+//   "Animals",
+//   "Memories",
+//   "Music Performance",
+//   "Singing",
+//   "Babies and Little People",
+//   "Reading a Book",
+//   "Nature",
+//   "Funny",
+//   "Creative",
+// ];
 
 function getKindFromFile(file) {
   return file.type.startsWith("video/") ? "video" : "photo";
