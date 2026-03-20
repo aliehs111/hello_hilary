@@ -65,7 +65,6 @@ export default function Hilary() {
                 `/api/s3/presign-download?key=${encodeURIComponent(p.original_key)}`,
               );
               const urlData = await urlRes.json().catch(() => ({}));
-
               if (!urlRes.ok || !urlData?.url) return [p.id, null];
               return [p.id, urlData.url];
             } catch {
@@ -78,12 +77,10 @@ export default function Hilary() {
           videosOnly.map(async (v) => {
             try {
               if (!v.thumbnail_key) return [v.id, null];
-
               const urlRes = await fetch(
                 `/api/s3/presign-download?key=${encodeURIComponent(v.thumbnail_key)}`,
               );
               const urlData = await urlRes.json().catch(() => ({}));
-
               if (!urlRes.ok || !urlData?.url) return [v.id, null];
               return [v.id, urlData.url];
             } catch {
@@ -137,15 +134,12 @@ export default function Hilary() {
   const playVideo = async (key, title, poster = "") => {
     try {
       setVideoLoading(true);
-
       const res = await fetch(
         `/api/s3/presign-download?key=${encodeURIComponent(key)}`,
       );
       const data = await res.json().catch(() => ({}));
-
       if (!res.ok) throw new Error(data?.error || "Failed to get video URL");
       if (!data?.url) throw new Error("No URL returned");
-
       setPlayerUrl(data.url);
       setPlayerTitle(title || "Hilary Video");
       setPlayerPoster(poster || "");
@@ -155,20 +149,6 @@ export default function Hilary() {
       alert(e.message || "Could not play video");
     }
   };
-
-  useEffect(() => {
-    if (!playlistActive) return;
-    if (!playlist.length) return;
-
-    const current = playlist[playlistIndex];
-    if (!current) return;
-
-    playVideo(
-      current.playback_key || current.original_key,
-      current.title,
-      videoThumbUrls[current.id] || "",
-    );
-  }, [playlistActive, playlist, playlistIndex, videoThumbUrls]);
 
   const closePlayer = () => {
     setPlayerOpen(false);
@@ -201,16 +181,9 @@ export default function Hilary() {
 
   const handleDeleteVideo = async (id) => {
     try {
-      const res = await fetch(`/api/media/${id}`, {
-        method: "DELETE",
-      });
-
+      const res = await fetch(`/api/media/${id}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Delete failed");
-      }
-
+      if (!res.ok) throw new Error(data?.error || "Delete failed");
       setMedia((prev) => prev.filter((m) => m.id !== id));
       setShowVideoDeleteSuccess(true);
     } catch (e) {
@@ -221,32 +194,21 @@ export default function Hilary() {
 
   const handleDeletePhoto = async (id) => {
     if (!id) return;
-
     try {
-      const res = await fetch(`/api/media/${id}`, {
-        method: "DELETE",
-      });
-
+      const res = await fetch(`/api/media/${id}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Delete failed");
-      }
-
+      if (!res.ok) throw new Error(data?.error || "Delete failed");
       setMedia((prev) => prev.filter((m) => m.id !== id));
-
       setPhotoUrls((prev) => {
         const next = { ...prev };
         delete next[id];
         return next;
       });
-
       setPhotoLoadFailed((prev) => {
         const next = { ...prev };
         delete next[id];
         return next;
       });
-
       setShowPhotoDeleteConfirm(false);
       closePhotoViewer();
       setShowPhotoDeleteSuccess(true);
@@ -257,11 +219,9 @@ export default function Hilary() {
 
   useEffect(() => {
     if (!playerOpen) return;
-
     const onKeyDown = (e) => {
       if (e.key === "Escape") closePlayer();
     };
-
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [playerOpen]);
@@ -270,61 +230,61 @@ export default function Hilary() {
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-blue-50 px-4 pb-16 pt-20 sm:px-6">
       <FallingHeartsOverlay count={14} />
 
-      <div className="mx-auto max-w-7xl">
-        <div className="relative mb-16">
-          <div className="grid items-start gap-12 md:grid-cols-2">
-            <div className="text-center">
-              <img
-                src={HilaryMainPhoto}
-                alt="Hilary smiling warmly"
-                className="mx-auto mb-6 h-48 w-48 rounded-full border-8 border-pink-200 object-cover shadow-2xl md:h-64 md:w-64"
-              />
-
-              <h1 className="mb-4 text-5xl font-bold text-pink-800 md:text-6xl">
-                Hilary&apos;s Page 💕
-              </h1>
-
-              <p className="mx-auto max-w-md text-xl text-gray-700 md:text-2xl">
-                See what Hilary&apos;s been up to!
-              </p>
-            </div>
-
-            <div>
-              <h2 className="mb-6 text-center text-2xl font-bold text-pink-700 md:text-left md:text-3xl">
-                Featured Videos
-              </h2>
-
-              {featuredVideos.length > 0 && (
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                  {featuredVideos.map((video) => (
-                    <button
-                      key={video.id}
-                      type="button"
-                      onClick={() =>
-                        playVideo(
-                          video.playback_key || video.original_key,
-                          video.title,
-                          videoThumbUrls[video.id] || "",
-                        )
-                      }
-                      className="group w-full"
-                    >
-                      <div className="relative overflow-hidden rounded-2xl shadow-lg">
-                        <img
-                          src={videoThumbUrls[video.id]}
-                          alt={video.title || "Featured video"}
-                          className="h-32 w-full object-cover transition group-hover:scale-105 sm:h-40"
-                        />
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+      <div className="mx-auto max-w-5xl">
+        {/* Hero */}
+        <div className="mb-10 flex flex-col items-center text-center">
+          <img
+            src={HilaryMainPhoto}
+            alt="Hilary smiling warmly"
+            className="mb-6 h-40 w-40 rounded-full border-8 border-pink-200 object-cover shadow-2xl sm:h-52 sm:w-52"
+          />
+          <h1 className="mb-3 text-4xl font-bold text-pink-800 sm:text-5xl">
+            Hilary&apos;s Page 💕
+          </h1>
+          <p className="max-w-sm text-lg text-gray-600">
+            See what Hilary&apos;s been up to!
+          </p>
         </div>
 
-        <div className="mb-10 flex justify-center md:justify-end">
+        {/* Featured Videos */}
+        {featuredVideos.length > 0 && (
+          <section className="mb-10">
+            <h2 className="mb-4 text-center text-xl font-bold text-pink-700 sm:text-2xl">
+              ⭐ Featured Videos
+            </h2>
+            <div className="flex gap-4 overflow-x-auto pb-2 sm:justify-center">
+              {featuredVideos.map((video) => (
+                <button
+                  key={video.id}
+                  type="button"
+                  onClick={() =>
+                    playVideo(
+                      video.playback_key || video.original_key,
+                      video.title,
+                      videoThumbUrls[video.id] || "",
+                    )
+                  }
+                  className="group relative w-64 flex-shrink-0 overflow-hidden rounded-2xl shadow-md transition-all duration-300 hover:shadow-pink-200 hover:shadow-xl hover:scale-[1.02] sm:w-72"
+                >
+                  <img
+                    src={videoThumbUrls[video.id]}
+                    alt={video.title || "Featured video"}
+                    className="h-44 w-full object-cover sm:h-52"
+                  />
+                  {video.title && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent px-3 py-3">
+                      <p className="truncate text-sm font-semibold text-white">
+                        {video.title}
+                      </p>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+        {/* Go to photos */}
+        <div className="mb-10 flex justify-center">
           <a
             href="#photos"
             className="inline-flex items-center gap-2 rounded-full border border-pink-200 bg-white/90 px-4 py-2 text-sm font-semibold text-pink-700 shadow-sm transition hover:bg-pink-50"
@@ -441,15 +401,14 @@ export default function Hilary() {
                         <button
                           type="button"
                           onClick={() => photoSwiperRef.current?.slidePrev()}
-                          className="absolute left-4 top-1/2 z-[100] -translate-y-1/2 rounded-full bg-white px-5 py-3 text-3xl font-bold text-pink-700 shadow-2xl"
+                          className="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white px-5 py-3 text-3xl font-bold text-pink-700 shadow-2xl"
                         >
                           ‹
                         </button>
-
                         <button
                           type="button"
                           onClick={() => photoSwiperRef.current?.slideNext()}
-                          className="absolute right-4 top-1/2 z-[100] -translate-y-1/2 rounded-full bg-white px-5 py-3 text-3xl font-bold text-pink-700 shadow-2xl"
+                          className="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white px-5 py-3 text-3xl font-bold text-pink-700 shadow-2xl"
                         >
                           ›
                         </button>
@@ -484,9 +443,7 @@ export default function Hilary() {
           onPrev={goToPreviousPhoto}
           onNext={goToNextPhoto}
           showDelete={true}
-          onDelete={(id) => {
-            setShowPhotoDeleteConfirm(true);
-          }}
+          onDelete={() => setShowPhotoDeleteConfirm(true)}
         />
 
         <ConfirmModal
@@ -525,6 +482,26 @@ export default function Hilary() {
           }}
         />
       </div>
+
+      <button
+        type="button"
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        className="fixed bottom-6 right-6 z-50 rounded-full bg-white/80 p-3 text-pink-500 shadow-lg backdrop-blur-sm transition hover:bg-white hover:text-pink-700"
+        aria-label="Back to top"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-5 w-5"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            fillRule="evenodd"
+            d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </button>
     </div>
   );
 }

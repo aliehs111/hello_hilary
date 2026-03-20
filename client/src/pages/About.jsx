@@ -75,14 +75,14 @@ export default function About() {
 
             <p className="text-xl text-gray-700 leading-relaxed">
               <span className="text-pink-600 font-semibold">
-                Thank you for being someone special in Hilary’s life 💕
+                Thank you for being someone special for Hilary! 💕
               </span>{" "}
               If you've been invited to Hello Hilary, it's because you can make
               a difference in Hilary's life by adding thoughtful and
               entertaining videos for her to watch. Even if you haven't seen her
-              in a while, with just a simple “hello” can brighten her day more
-              than you know. Please drop in whenever you can — your presence
-              truly makes a difference.💕
+              in a while, she still has fond memories of you! And with just a
+              simple “hello” can brighten her day. Please drop in whenever you
+              can — your messages will truly make a difference! 💕
             </p>
 
             <p className="text-xl text-gray-700 leading-relaxed">
@@ -91,12 +91,12 @@ export default function About() {
               </span>{" "}
               We are so grateful for the kindness, patience, and support you
               give her every day. As her family, we can’t always be there in
-              person, so it means so much to see her smiling, engaged, and
-              enjoying moments throughout her day. If you're able, we would love
-              for you to share photos or short videos by selecting “Post to
-              Hilary’s Page” when uploading. Plus if you have any personal
-              videos of music, nature, your pets or your kids that you think
-              would entertain Hilary please add those too! 💕
+              person, so it means so much to see her smiling and enjoying
+              moments throughout her day. We would love it if you could share
+              photos or short videos by selecting “Post to Hilary’s Page” when
+              uploading. Plus if you have any personal videos of music, nature,
+              your pets or your kids that you think would entertain Hilary
+              please add those too! 💕
             </p>
           </div>
         </div>
