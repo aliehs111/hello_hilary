@@ -5,12 +5,12 @@ import {
   DisclosurePanel,
 } from "@headlessui/react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
-import { Link, useLocation } from "react-router-dom";
-import { PlusIcon } from "@heroicons/react/20/solid"; // Add useLocation for active state
-import logo from "../assets/HelloHilaryLogo192.png"; // your logo
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { PlusIcon } from "@heroicons/react/20/solid";
+import logo from "../assets/HelloHilaryLogo192.png";
+import { useAuth } from "../context/AuthContext";
 
-const navigation = [
-  { name: "Sign In", href: "/signin" },
+const navLinks = [
   { name: "Gallery", href: "/gallery" },
   { name: "Hilary", href: "/hilary" },
   { name: "About", href: "/about" },
@@ -19,7 +19,18 @@ const navigation = [
 ];
 
 export default function Navbar() {
-  const location = useLocation(); // To highlight active link
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { currentUser, logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/signin");
+  };
+
+  const navigation = currentUser
+    ? navLinks
+    : [{ name: "Sign In", href: "/signin" }, ...navLinks];
 
   return (
     <Disclosure
@@ -34,28 +45,15 @@ export default function Navbar() {
               <DisclosureButton className="group relative inline-flex items-center justify-center rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-inset">
                 <span className="absolute -inset-0.5" />
                 <span className="sr-only">Open main menu</span>
-                <Bars3Icon
-                  aria-hidden="true"
-                  className="block h-6 w-6 group-data-[open]:hidden"
-                />
-                <XMarkIcon
-                  aria-hidden="true"
-                  className="hidden h-6 w-6 group-data-[open]:block"
-                />
+                <Bars3Icon aria-hidden="true" className="block h-6 w-6 group-data-[open]:hidden" />
+                <XMarkIcon aria-hidden="true" className="hidden h-6 w-6 group-data-[open]:block" />
               </DisclosureButton>
             </div>
 
-            {/* Logo home link */}
+            {/* Logo */}
             <div className="flex shrink-0 items-center">
-              <Link
-                to="/"
-                className="flex items-center focus:outline-none focus:ring-2 focus:ring-pink-300 rounded"
-              >
-                <img
-                  alt="Hello Hilary – back to home"
-                  src={logo}
-                  className="h-8 w-auto md:h-10"
-                />
+              <Link to="/" className="flex items-center focus:outline-none focus:ring-2 focus:ring-pink-300 rounded">
+                <img alt="Hello Hilary – back to home" src={logo} className="h-8 w-auto md:h-10" />
               </Link>
             </div>
 
@@ -77,14 +75,26 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* Right side: Add Hello button */}
-          <div className="flex items-center">
+          {/* Right side */}
+          <div className="flex items-center gap-3">
+            {currentUser && (
+              <>
+                <span className="hidden md:block text-sm text-gray-600 font-medium">
+                  {currentUser.display_name}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="hidden md:inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition"
+                >
+                  Sign Out
+                </button>
+              </>
+            )}
             <Link
-              to="/upload" // or /signin if you want auth gate there
+              to="/upload"
               className="inline-flex items-center gap-x-1.5 rounded-md bg-pink-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-pink-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pink-600"
             >
-              <PlusIcon className="h-5 w-5" aria-hidden="true" />{" "}
-              {/* Heroicon */}
+              <PlusIcon className="h-5 w-5" aria-hidden="true" />
               Add Hello
             </Link>
           </div>
@@ -109,15 +119,24 @@ export default function Navbar() {
             </DisclosureButton>
           ))}
         </div>
-        <div className="border-t border-gray-200 pt-4 pb-3">
-          <div className="px-4">
-            <Link
-              to="/upload"
-              className="block rounded-md px-3 py-2 text-base font-medium text-white bg-pink-500 hover:bg-pink-600"
-            >
-              Add Hello
-            </Link>
-          </div>
+        <div className="border-t border-gray-200 pt-4 pb-3 px-4 space-y-2">
+          {currentUser && (
+            <>
+              <p className="text-sm font-medium text-gray-700 px-3">{currentUser.display_name}</p>
+              <button
+                onClick={handleLogout}
+                className="block w-full rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:bg-gray-50 text-left"
+              >
+                Sign Out
+              </button>
+            </>
+          )}
+          <Link
+            to="/upload"
+            className="block rounded-md px-3 py-2 text-base font-medium text-white bg-pink-500 hover:bg-pink-600"
+          >
+            Add Hello
+          </Link>
         </div>
       </DisclosurePanel>
     </Disclosure>

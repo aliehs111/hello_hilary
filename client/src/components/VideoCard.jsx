@@ -1,5 +1,7 @@
 import { useState } from "react";
 import ConfirmModal from "@/components/ConfirmModal";
+import PermissionModal from "@/components/PermissionModal";
+import { useAuth } from "@/context/AuthContext";
 
 export default function VideoCard({
   video,
@@ -10,15 +12,29 @@ export default function VideoCard({
   showDelete = true,
   showEdit = true,
 }) {
+  const { currentUser } = useAuth();
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showPermission, setShowPermission] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const canModify =
+    currentUser &&
+    (currentUser.id === video.user_id || currentUser.role === "admin");
+
+  const handleEditClick = () => {
+    if (!canModify) { setShowPermission(true); return; }
+    if (onEdit) onEdit(video);
+  };
+
+  const handleDeleteClick = () => {
+    if (!canModify) { setShowPermission(true); return; }
+    setShowConfirm(true);
+  };
 
   const handleDelete = async () => {
     if (!onDelete) return;
-
     setShowConfirm(false);
     setIsDeleting(true);
-
     try {
       await onDelete(video.id);
     } catch (err) {
@@ -72,7 +88,6 @@ export default function VideoCard({
               <h3 className="truncate text-sm font-semibold text-white">
                 {video.title || "Hello Video"}
               </h3>
-
               <p className="text-xs text-white/80">
                 From {video.display_name || "Someone"}
               </p>
@@ -83,7 +98,7 @@ export default function VideoCard({
             <div className="mt-3 flex justify-end px-2 pb-2">
               <button
                 type="button"
-                onClick={() => onEdit(video)}
+                onClick={handleEditClick}
                 className="absolute bottom-3 right-20 z-30 opacity-100 md:opacity-0 md:group-hover:opacity-100 rounded-full bg-white/80 text-blue-600 text-xs px-3 py-1 shadow backdrop-blur hover:bg-blue-500 hover:text-white transition"
               >
                 Edit
@@ -95,7 +110,7 @@ export default function VideoCard({
             <div className="mt-3 flex justify-end px-2 pb-2">
               <button
                 type="button"
-                onClick={() => setShowConfirm(true)}
+                onClick={handleDeleteClick}
                 disabled={isDeleting}
                 className="absolute bottom-3 right-3 z-30 opacity-100 md:opacity-0 md:group-hover:opacity-100 rounded-full bg-white/80 text-red-500 text-xs px-3 py-1 shadow backdrop-blur hover:bg-red-500 hover:text-white transition disabled:opacity-50"
               >
@@ -113,6 +128,11 @@ export default function VideoCard({
         cancelText="Cancel"
         onConfirm={handleDelete}
         onCancel={() => setShowConfirm(false)}
+      />
+
+      <PermissionModal
+        isOpen={showPermission}
+        onClose={() => setShowPermission(false)}
       />
     </>
   );

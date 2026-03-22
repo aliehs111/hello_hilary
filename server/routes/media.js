@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
+const { requireAuth } = require("../middleware/auth");
 const {
   createMediaConvertJob,
   watchMediaConvertJob,
@@ -17,7 +18,7 @@ const s3 = new S3Client({
   },
 });
 
-router.get("/", async (req, res) => {
+router.get("/", requireAuth, async (req, res) => {
   try {
     const { uploader, media_type, categories, q, hilary_page } = req.query;
     const status = req.query.status;
@@ -106,10 +107,9 @@ router.get("/", async (req, res) => {
 
 // POST /api/media/complete
 
-router.post("/complete", async (req, res) => {
+router.post("/complete", requireAuth, async (req, res) => {
   try {
     const {
-      user_id,
       media_type,
       original_key,
       mime_type,
@@ -149,7 +149,7 @@ router.post("/complete", async (req, res) => {
 `;
 
     const values = [
-      user_id,
+      req.user.id,
       media_type,
       initialStatus,
       original_key,
@@ -213,7 +213,7 @@ router.post("/complete", async (req, res) => {
 });
 
 // POST /api/media/:id/processed
-router.post("/:id/processed", async (req, res) => {
+router.post("/:id/processed", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { playback_key, thumbnail_key } = req.body;
@@ -249,7 +249,7 @@ router.post("/:id/processed", async (req, res) => {
 });
 
 // POST /api/media/:id/failed
-router.post("/:id/failed", async (req, res) => {
+router.post("/:id/failed", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { error_message } = req.body;
@@ -279,10 +279,15 @@ router.post("/:id/failed", async (req, res) => {
 });
 
 // PATCH /api/media/:id
-// PATCH /api/media/:id
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
+
+    const ownerCheck = await db.query("SELECT user_id FROM media WHERE id = $1", [id]);
+    if (ownerCheck.rows.length === 0) return res.status(404).json({ error: "Media not found" });
+    const isOwner = ownerCheck.rows[0].user_id === req.user.id;
+    const isAdmin = req.user.role === "admin";
+    if (!isOwner && !isAdmin) return res.status(403).json({ error: "Forbidden" });
     const {
       is_featured,
       is_hidden,
@@ -354,15 +359,15 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
-// DELETE /api/media/:id – no auth for now
-router.delete("/:id", async (req, res) => {
+// DELETE /api/media/:id
+router.delete("/:id", requireAuth, async (req, res) => {
   const { id } = req.params;
 
   try {
-    // Fetch media to get S3 keys
+    // Fetch media to get S3 keys and check ownership
     const mediaRes = await db.query(
       `
-      SELECT original_key, playback_key, thumbnail_key
+      SELECT user_id, original_key, playback_key, thumbnail_key
       FROM media
       WHERE id = $1
       `,
@@ -372,6 +377,10 @@ router.delete("/:id", async (req, res) => {
     if (mediaRes.rows.length === 0) {
       return res.status(404).json({ error: "Media not found" });
     }
+
+    const isOwner = mediaRes.rows[0].user_id === req.user.id;
+    const isAdmin = req.user.role === "admin";
+    if (!isOwner && !isAdmin) return res.status(403).json({ error: "Forbidden" });
 
     const media = mediaRes.rows[0];
 

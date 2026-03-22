@@ -1,8 +1,10 @@
-// src/main.jsx
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
 import Layout from "./components/Layout";
+import RequireAuth from "./components/RequireAuth";
+import RequireAdmin from "./components/RequireAdmin";
 import Home from "./pages/Home";
 import Gallery from "./pages/Gallery";
 import SignIn from "./pages/SignIn";
@@ -10,47 +12,39 @@ import Upload from "./pages/Upload";
 import About from "./pages/About";
 import Hilary from "./pages/Hilary";
 import AdminMedia from "./pages/AdminMedia";
+import NotFound from "./pages/NotFound";
 import Footer from "./components/Footer";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/gallery" element={<Gallery />} />
-          <Route path="/signin" element={<SignIn />} />
-          <Route path="/upload" element={<Upload />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/hilary" element={<Hilary />} />
-          <Route path="/admin" element={<AdminMedia />} />
+      <AuthProvider>
+        <Routes>
+          <Route element={<Layout />}>
+            {/* Public */}
+            <Route path="/" element={<Home />} />
+            <Route path="/signin" element={<SignIn />} />
 
-          {/* 404 fallback */}
-          <Route
-            path="*"
-            element={
-              <div className="min-h-screen flex items-center justify-center text-center pt-20 px-6">
-                <div>
-                  <h1 className="text-5xl font-bold text-pink-800 mb-6">
-                    Oops! Page Not Found
-                  </h1>
-                  <p className="text-xl text-gray-600 mb-10 max-w-md mx-auto">
-                    The page you're looking for doesn't exist or has been moved.
-                  </p>
-                  <Link
-                    to="/"
-                    className="inline-block bg-pink-500 text-white text-lg font-semibold py-4 px-10 rounded-full shadow-lg hover:bg-pink-600 transition focus:outline-none focus:ring-4 focus:ring-pink-300"
-                  >
-                    Back to Home 💕
-                  </Link>
-                </div>
-              </div>
-            }
-          />
-        </Route>
-      </Routes>
-      <Footer />
+            {/* Requires any login */}
+            <Route element={<RequireAuth />}>
+              <Route path="/gallery" element={<Gallery />} />
+              <Route path="/upload" element={<Upload />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/hilary" element={<Hilary />} />
+            </Route>
+
+            {/* Requires admin role */}
+            <Route element={<RequireAdmin />}>
+              <Route path="/admin" element={<AdminMedia />} />
+            </Route>
+
+            {/* 404 */}
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+        <Footer />
+      </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>,
 );

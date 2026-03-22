@@ -19,7 +19,7 @@ export default function AdminMedia() {
       setLoading(true);
       setErr("");
 
-      const res = await fetch("/api/media");
+      const res = await fetch("/api/media", { credentials: "include" });
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) throw new Error(data?.error || "Failed to load media");
@@ -37,6 +37,7 @@ export default function AdminMedia() {
       const res = await fetch(`/api/media/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(updates),
       });
 
@@ -59,6 +60,7 @@ export default function AdminMedia() {
     try {
       const res = await fetch(`/api/media/${id}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
       const data = await res.json().catch(() => ({}));

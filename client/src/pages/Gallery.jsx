@@ -14,6 +14,8 @@ import SuccessModal from "@/components/SuccessModal";
 import VideoPlayerModal from "@/components/VideoPlayerModal";
 import { MEDIA_CATEGORIES } from "@/constants/mediaCategories";
 import EditVideoModal from "@/components/EditVideoModal";
+import PermissionModal from "@/components/PermissionModal";
+import { useAuth } from "@/context/AuthContext";
 
 const VIBES = [
   {
@@ -44,6 +46,7 @@ const VIBES = [
 ];
 
 export default function Gallery() {
+  const { currentUser } = useAuth();
   const [media, setMedia] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -74,6 +77,7 @@ export default function Gallery() {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
 
   const [showPhotoDeleteConfirm, setShowPhotoDeleteConfirm] = useState(false);
+  const [showPhotoPermission, setShowPhotoPermission] = useState(false);
   const [showPhotoDeleteSuccess, setShowPhotoDeleteSuccess] = useState(false);
   const [showVideoDeleteSuccess, setShowVideoDeleteSuccess] = useState(false);
 
@@ -116,9 +120,8 @@ export default function Gallery() {
 
       const res = await fetch(`/api/media/${editingVideo.id}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           title: editForm.title,
           caption: editForm.caption,
@@ -167,7 +170,7 @@ export default function Gallery() {
         }
 
         const url = `/api/media${params.toString() ? `?${params.toString()}` : ""}`;
-        const res = await fetch(url);
+        const res = await fetch(url, { credentials: "include" });
         const data = await res.json().catch(() => ({}));
 
         if (!res.ok) {
@@ -190,6 +193,7 @@ export default function Gallery() {
                 `/api/s3/presign-download?key=${encodeURIComponent(
                   p.original_key,
                 )}`,
+                { credentials: "include" },
               );
               const urlData = await urlRes.json().catch(() => ({}));
 
@@ -210,6 +214,7 @@ export default function Gallery() {
                 `/api/s3/presign-download?key=${encodeURIComponent(
                   v.thumbnail_key,
                 )}`,
+                { credentials: "include" },
               );
               const urlData = await urlRes.json().catch(() => ({}));
 
@@ -343,6 +348,7 @@ export default function Gallery() {
       setVideoLoading(true);
       const res = await fetch(
         `/api/s3/presign-download?key=${encodeURIComponent(key)}`,
+        { credentials: "include" },
       );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Failed to get video URL");
@@ -428,6 +434,7 @@ export default function Gallery() {
     try {
       const res = await fetch(`/api/media/${id}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
       const data = await res.json().catch(() => ({}));
@@ -450,6 +457,7 @@ export default function Gallery() {
     try {
       const res = await fetch(`/api/media/${id}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
       const data = await res.json().catch(() => ({}));
@@ -826,7 +834,14 @@ export default function Gallery() {
                 </div>
 
                 <button
-                  onClick={() => setShowPhotoDeleteConfirm(true)}
+                  onClick={() => {
+                    const canModify =
+                      currentUser &&
+                      (currentUser.id === selectedPhoto.user_id ||
+                        currentUser.role === "admin");
+                    if (!canModify) { setShowPhotoPermission(true); return; }
+                    setShowPhotoDeleteConfirm(true);
+                  }}
                   className="rounded-full bg-red-500 px-5 py-2.5 text-sm font-bold text-white shadow transition hover:bg-red-600"
                 >
                   Delete Photo
@@ -835,6 +850,11 @@ export default function Gallery() {
             </div>
           </div>
         )}
+
+        <PermissionModal
+          isOpen={showPhotoPermission}
+          onClose={() => setShowPhotoPermission(false)}
+        />
 
         <ConfirmModal
           isOpen={showPhotoDeleteConfirm}

@@ -11,6 +11,7 @@ const {
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
 const router = express.Router();
+const { requireAuth } = require("../middleware/auth");
 
 function requireEnv(name) {
   const v = process.env[name];
@@ -58,7 +59,7 @@ try {
  * body: { contentType: string, kind?: "video"|"photo", ext?: "mov"|"jpg"|... }
  * returns: { uploadUrl, key }
  */
-router.post("/presign-upload", async (req, res) => {
+router.post("/presign-upload", requireAuth, async (req, res) => {
   try {
     if (!s3) throw new Error("S3 client not configured (check env vars)");
 
@@ -90,7 +91,7 @@ router.post("/presign-upload", async (req, res) => {
  * GET /api/s3/presign-download?key=uploads/...
  * returns: { url }
  */
-router.get("/presign-download", async (req, res) => {
+router.get("/presign-download", requireAuth, async (req, res) => {
   try {
     if (!s3) throw new Error("S3 client not configured (check env vars)");
 

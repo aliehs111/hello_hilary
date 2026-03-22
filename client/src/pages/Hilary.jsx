@@ -5,6 +5,7 @@ import { Pagination, Autoplay } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 import PhotoLightbox from "@/components/PhotoLightbox";
+import PermissionModal from "@/components/PermissionModal";
 
 import HilaryMainPhoto from "../assets/HilPeach.jpg";
 import FallingHeartsOverlay from "../components/FallingHeartsOverlay";
@@ -12,8 +13,10 @@ import VideoCard from "@/components/VideoCard";
 import ConfirmModal from "@/components/ConfirmModal";
 import SuccessModal from "@/components/SuccessModal";
 import VideoPlayerModal from "@/components/VideoPlayerModal";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Hilary() {
+  const { currentUser } = useAuth();
   const [media, setMedia] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -32,6 +35,7 @@ export default function Hilary() {
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
 
   const [showPhotoDeleteConfirm, setShowPhotoDeleteConfirm] = useState(false);
+  const [showPhotoPermission, setShowPhotoPermission] = useState(false);
   const [showPhotoDeleteSuccess, setShowPhotoDeleteSuccess] = useState(false);
   const [showVideoDeleteSuccess, setShowVideoDeleteSuccess] = useState(false);
 
@@ -45,7 +49,7 @@ export default function Hilary() {
       setErr("");
 
       try {
-        const res = await fetch("/api/media?hilary_page=true");
+        const res = await fetch("/api/media?hilary_page=true", { credentials: "include" });
         const data = await res.json().catch(() => ({}));
 
         if (!res.ok) throw new Error(data?.error || "Failed to load media");
@@ -63,6 +67,7 @@ export default function Hilary() {
             try {
               const urlRes = await fetch(
                 `/api/s3/presign-download?key=${encodeURIComponent(p.original_key)}`,
+                { credentials: "include" },
               );
               const urlData = await urlRes.json().catch(() => ({}));
               if (!urlRes.ok || !urlData?.url) return [p.id, null];
@@ -79,6 +84,7 @@ export default function Hilary() {
               if (!v.thumbnail_key) return [v.id, null];
               const urlRes = await fetch(
                 `/api/s3/presign-download?key=${encodeURIComponent(v.thumbnail_key)}`,
+                { credentials: "include" },
               );
               const urlData = await urlRes.json().catch(() => ({}));
               if (!urlRes.ok || !urlData?.url) return [v.id, null];
@@ -136,6 +142,7 @@ export default function Hilary() {
       setVideoLoading(true);
       const res = await fetch(
         `/api/s3/presign-download?key=${encodeURIComponent(key)}`,
+        { credentials: "include" },
       );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Failed to get video URL");
@@ -181,7 +188,7 @@ export default function Hilary() {
 
   const handleDeleteVideo = async (id) => {
     try {
-      const res = await fetch(`/api/media/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/media/${id}`, { method: "DELETE", credentials: "include" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Delete failed");
       setMedia((prev) => prev.filter((m) => m.id !== id));
@@ -195,7 +202,7 @@ export default function Hilary() {
   const handleDeletePhoto = async (id) => {
     if (!id) return;
     try {
-      const res = await fetch(`/api/media/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/media/${id}`, { method: "DELETE", credentials: "include" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Delete failed");
       setMedia((prev) => prev.filter((m) => m.id !== id));
@@ -443,7 +450,20 @@ export default function Hilary() {
           onPrev={goToPreviousPhoto}
           onNext={goToNextPhoto}
           showDelete={true}
-          onDelete={() => setShowPhotoDeleteConfirm(true)}
+          onDelete={() => {
+            const selectedPhoto = photos[selectedPhotoIndex];
+            const canModify =
+              currentUser &&
+              (currentUser.id === selectedPhoto?.user_id ||
+                currentUser.role === "admin");
+            if (!canModify) { setShowPhotoPermission(true); return; }
+            setShowPhotoDeleteConfirm(true);
+          }}
+        />
+
+        <PermissionModal
+          isOpen={showPhotoPermission}
+          onClose={() => setShowPhotoPermission(false)}
         />
 
         <ConfirmModal

@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import ConfettiBurst from "../components/ConfettiBurst";
 import { MEDIA_CATEGORIES } from "@/constants/mediaCategories";
+import { useAuth } from "@/context/AuthContext";
 // const MEDIA_CATEGORIES = [
 //   "Just a Hello",
 //   "Animals",
@@ -26,6 +27,7 @@ function getExtensionFromFile(file) {
 }
 
 export default function Upload() {
+  const { isPowerUser } = useAuth();
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
@@ -73,20 +75,6 @@ export default function Upload() {
       return;
     }
 
-    let userId = null;
-    try {
-      const stored = localStorage.getItem("user");
-      if (stored) userId = JSON.parse(stored)?.id;
-    } catch {
-      // ignore
-    }
-
-    if (!userId) {
-      setStatus("error");
-      setStatusMessage("Please log in again (missing user session).");
-      return;
-    }
-
     const fileExt = getExtensionFromFile(file);
 
     setLoading(true);
@@ -97,6 +85,7 @@ export default function Upload() {
       const presignRes = await fetch("/api/s3/presign-upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           kind: fileKind,
           contentType: file.type,
@@ -129,8 +118,8 @@ export default function Upload() {
       const completeRes = await fetch("/api/media/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
-          user_id: userId,
           media_type: fileKind,
           original_key: key,
           mime_type: file.type,
@@ -227,35 +216,37 @@ export default function Upload() {
                 </label>
               ))}
             </div>
-            <div className="rounded-2xl border border-pink-100 bg-pink-50/70 p-4">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-pink-800">
-                    Post to Hilary’s Page
-                  </p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Turn this on if this photo or video is a special Hilary
-                    moment and should appear on her personal page.
-                  </p>
-                </div>
+            {isPowerUser && (
+              <div className="rounded-2xl border border-pink-100 bg-pink-50/70 p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-pink-800">
+                      Post to Hilary’s Page
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Turn this on if this photo or video is a special Hilary
+                      moment and should appear on her personal page.
+                    </p>
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={() => setIsHilaryPage((prev) => !prev)}
-                  className={`relative inline-flex h-7 w-14 items-center rounded-full transition ${
-                    isHilaryPage ? "bg-pink-500" : "bg-gray-300"
-                  }`}
-                  aria-pressed={isHilaryPage}
-                  aria-label="Post to Hilary's Page"
-                >
-                  <span
-                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
-                      isHilaryPage ? "translate-x-8" : "translate-x-1"
+                  <button
+                    type="button"
+                    onClick={() => setIsHilaryPage((prev) => !prev)}
+                    className={`relative inline-flex h-7 w-14 items-center rounded-full transition ${
+                      isHilaryPage ? "bg-pink-500" : "bg-gray-300"
                     }`}
-                  />
-                </button>
+                    aria-pressed={isHilaryPage}
+                    aria-label="Post to Hilary’s Page"
+                  >
+                    <span
+                      className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+                        isHilaryPage ? "translate-x-8" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div>

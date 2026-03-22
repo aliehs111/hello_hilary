@@ -1,42 +1,24 @@
-// src/pages/SignIn.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
-  const [secretCode, setSecretCode] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.trim(),
-          code: secretCode,
-        }),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (res.ok) {
-        // Backend returns the user object (no cookie session in your current auth)
-        localStorage.setItem("user", JSON.stringify(data));
-        navigate("/gallery"); // or '/upload'
-      } else {
-        setError(data.error || "Invalid email or code. Please try again.");
-      }
+      await login(email.trim(), password);
+      navigate("/gallery");
     } catch (err) {
-      setError(
-        "Connection issue — please check your connection and try again.",
-      );
+      setError(err.message || "Invalid email or password. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -50,16 +32,12 @@ export default function SignIn() {
         </h1>
 
         <p className="text-gray-700 mb-8 text-center text-lg">
-          Enter the email to which your invitation was sent and the security
-          code provided in that email invitation.
+          Enter your email and password to sign in.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
               Your Email
             </label>
             <input
@@ -74,17 +52,14 @@ export default function SignIn() {
           </div>
 
           <div>
-            <label
-              htmlFor="secretCode"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Security Code
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              Password
             </label>
             <input
-              id="secretCode"
+              id="password"
               type="password"
-              value={secretCode}
-              onChange={(e) => setSecretCode(e.target.value)}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
               className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent"
@@ -96,7 +71,7 @@ export default function SignIn() {
             disabled={loading}
             className="w-full bg-pink-500 text-white py-3 rounded-lg font-semibold text-lg hover:bg-pink-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Checking..." : "Log In"}
+            {loading ? "Signing in..." : "Log In"}
           </button>
         </form>
 
@@ -105,8 +80,7 @@ export default function SignIn() {
         )}
 
         <p className="mt-8 text-center text-sm text-gray-500">
-          First time? You must be added to the invite list first. If you think
-          you were invited, double-check your email spelling.
+          Don't have an account? Contact Sheila to be added.
         </p>
       </div>
     </div>
