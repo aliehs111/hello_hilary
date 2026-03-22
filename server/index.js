@@ -15,6 +15,7 @@ const db = require("./db");
 const s3Routes = require("./routes/s3");
 const authRoutes = require("./routes/auth");
 const mediaRoutes = require("./routes/media");
+const usersRoutes = require("./routes/users");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5001;
@@ -54,6 +55,7 @@ app.get("/health", async (req, res) => {
 app.use("/api/s3", s3Routes);
 app.use("/api/auth", authRoutes);
 app.use("/api/media", mediaRoutes);
+app.use("/api/users", usersRoutes);
 
 // Serve Vite build
 const distPath = path.join(__dirname, "..", "client", "dist");

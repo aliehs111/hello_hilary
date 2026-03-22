@@ -20,6 +20,15 @@ function getClientIp(req) {
 async function sendBruteForceAlert(ip, count) {
   // TODO: wire up nodemailer when SMTP vars are configured
   console.error(`[BRUTE FORCE ALERT] ${count} failed login attempts from IP: ${ip}`);
+  try {
+    await db.query(
+      `INSERT INTO activity_logs (id, user_id, event_type, metadata, ip_address)
+       VALUES ($1, NULL, 'brute_force_alert', $2, $3)`,
+      [uuidv4(), JSON.stringify({ ip, attemptCount: count }), ip]
+    );
+  } catch (e) {
+    console.error('[brute_force_alert log] failed:', e);
+  }
 }
 
 // POST /api/auth/login

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 export default function AdminMedia() {
   const [media, setMedia] = useState([]);
@@ -126,13 +127,21 @@ export default function AdminMedia() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-blue-50 px-6 pt-20 pb-12">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-10 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-pink-800">
-            Admin Media CMS ⚙️
-          </h1>
-          <p className="mt-3 text-lg text-gray-600">
-            Manage featured videos, Hilary page media, and cleanup.
-          </p>
+        <div className="mb-10 flex items-start justify-between">
+          <div className="text-center flex-1">
+            <h1 className="text-4xl md:text-5xl font-bold text-pink-800">
+              Admin Media CMS ⚙️
+            </h1>
+            <p className="mt-3 text-lg text-gray-600">
+              Manage featured videos, Hilary page media, and cleanup.
+            </p>
+          </div>
+          <Link
+            to="/admin/users"
+            className="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition whitespace-nowrap"
+          >
+            User Management →
+          </Link>
         </div>
 
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

@@ -9,6 +9,8 @@ const {
   GetObjectCommand,
 } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
+const { v4: uuidv4 } = require("uuid");
+const db = require("../db");
 
 const router = express.Router();
 const { requireAuth } = require("../middleware/auth");
@@ -106,6 +108,13 @@ router.get("/presign-download", requireAuth, async (req, res) => {
     });
 
     const url = await getSignedUrl(s3, command, { expiresIn: 60 * 10 }); // 10 min
+
+    await db.query(
+      `INSERT INTO activity_logs (id, user_id, event_type, metadata, ip_address)
+       VALUES ($1, $2, 'media_view', $3, $4)`,
+      [uuidv4(), req.user.id, JSON.stringify({ key }), req.ip]
+    );
+
     res.json({ url });
   } catch (err) {
     console.error("[presign-download] error:", err);

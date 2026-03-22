@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
+const { v4: uuidv4 } = require("uuid");
 const { requireAuth } = require("../middleware/auth");
 const {
   createMediaConvertJob,
@@ -202,6 +203,12 @@ router.post("/complete", requireAuth, async (req, res) => {
       }
     }
 
+    await db.query(
+      `INSERT INTO activity_logs (id, user_id, event_type, metadata, ip_address)
+       VALUES ($1, $2, 'media_upload', $3, $4)`,
+      [uuidv4(), req.user.id, JSON.stringify({ mediaId, mediaType: media_type, title: title ?? null }), req.ip]
+    );
+
     res.json({
       media: result.rows[0],
       message: processingMessage,
@@ -352,6 +359,15 @@ router.patch("/:id", requireAuth, async (req, res) => {
       return res.status(404).json({ error: "Media not found" });
     }
 
+    const fieldNames = Object.keys(req.body).filter((k) =>
+      ['is_featured','is_hidden','is_hilary_page','title','caption','categories'].includes(k)
+    );
+    await db.query(
+      `INSERT INTO activity_logs (id, user_id, event_type, metadata, ip_address)
+       VALUES ($1, $2, 'media_edit', $3, $4)`,
+      [uuidv4(), req.user.id, JSON.stringify({ mediaId: id, fields_changed: fieldNames }), req.ip]
+    );
+
     res.json({ media: result.rows[0] });
   } catch (err) {
     console.error("[PATCH /api/media/:id] error:", err);
@@ -403,6 +419,12 @@ router.delete("/:id", requireAuth, async (req, res) => {
 
     // Delete from DB
     await db.query("DELETE FROM media WHERE id = $1", [id]);
+
+    await db.query(
+      `INSERT INTO activity_logs (id, user_id, event_type, metadata, ip_address)
+       VALUES ($1, $2, 'media_delete', $3, $4)`,
+      [uuidv4(), req.user.id, JSON.stringify({ mediaId: id, deletedBy: req.user.id }), req.ip]
+    );
 
     res.json({ success: true, message: "Deleted" });
   } catch (err) {

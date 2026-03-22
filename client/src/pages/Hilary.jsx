@@ -506,7 +506,7 @@ export default function Hilary() {
       <button
         type="button"
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        className="fixed bottom-6 right-6 z-50 rounded-full bg-white/80 p-3 text-pink-500 shadow-lg backdrop-blur-sm transition hover:bg-white hover:text-pink-700"
+        className="fixed bottom-24 right-6 z-50 rounded-full bg-white/80 p-3 text-pink-500 shadow-lg backdrop-blur-sm transition hover:bg-white hover:text-pink-700"
         aria-label="Back to top"
       >
         <svg

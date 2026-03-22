@@ -12,6 +12,7 @@ import Upload from "./pages/Upload";
 import About from "./pages/About";
 import Hilary from "./pages/Hilary";
 import AdminMedia from "./pages/AdminMedia";
+import AdminUsers from "./pages/AdminUsers";
 import NotFound from "./pages/NotFound";
 import Footer from "./components/Footer";
 import "./index.css";
@@ -37,6 +38,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             {/* Requires admin role */}
             <Route element={<RequireAdmin />}>
               <Route path="/admin" element={<AdminMedia />} />
+              <Route path="/admin/users" element={<AdminUsers />} />
             </Route>
 
             {/* 404 */}
