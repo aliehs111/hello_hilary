@@ -10,4 +10,6 @@ export const MEDIA_CATEGORIES = [
   "Nature",
   "Funny",
   "Creative",
+  "Birthday",
+  "Holiday",
 ];

@@ -20,14 +20,14 @@ export default function Home() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-gradient-to-b from-pink-50 to-blue-50 px-6 py-6 sm:py-10">
+    <main className="relative min-h-screen overflow-hidden bg-gradient-to-b from-pink-50 to-blue-50 px-6 pb-6">
       <FallingHeartsOverlay count={16} />
 
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-4xl flex-col items-center justify-start pt-10 text-center sm:justify-center sm:pt-0">
+      <div className="relative z-10 mx-auto flex min-h-screen max-w-4xl flex-col items-center justify-start pt-2 text-center sm:justify-center sm:pt-0">
         <img
           src={hilaryPhoto}
           alt="Hilary smiling"
-          className="mb-4 h-48 w-48 rounded-full border-4 border-pink-200 object-cover shadow-xl md:h-64 md:w-64"
+          className="mb-4 h-56 w-56 rounded-full border-4 border-pink-200 object-cover shadow-xl md:h-72 md:w-72"
           loading="lazy"
         />
 

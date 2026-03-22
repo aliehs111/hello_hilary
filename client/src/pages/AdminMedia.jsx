@@ -12,6 +12,7 @@ export default function AdminMedia() {
   const [mediaTypeFilter, setMediaTypeFilter] = useState("all");
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     loadMedia();
   }, []);
 

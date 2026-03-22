@@ -1,16 +1,5 @@
 // src/components/FilterPanel.jsx
-const CATEGORIES = [
-  "Just a Hello",
-  "Animals",
-  "Memories",
-  "Music Performance",
-  "Singing",
-  "Babies and Little People",
-  "Reading a Book",
-  "Nature",
-  "Funny",
-  "Creative",
-];
+import { MEDIA_CATEGORIES as CATEGORIES } from "@/constants/mediaCategories";
 
 export default function FilterPanel({
   isOpen,

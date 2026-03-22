@@ -528,10 +528,28 @@ export default function Gallery() {
     setPlaylistIndex(prevIndex);
   };
 
-  const handlePlayAll = () => {
-    if (videos.length === 0) return;
+  const SPECIAL_CATEGORIES = ["Birthday", "Holiday"];
 
-    const shuffled = shuffleVideos(videos);
+  const handlePlayAll = () => {
+    const mainVideos = videos.filter(
+      (v) => !v.categories?.some((c) => SPECIAL_CATEGORIES.includes(c))
+    );
+    if (mainVideos.length === 0) return;
+
+    const shuffled = shuffleVideos(mainVideos);
+    setPlaylist(shuffled);
+    setPlaylistIndex(0);
+    setPlaylistActive(true);
+    setPlaylistEndTime(null);
+  };
+
+  const handlePlayBirthday = () => {
+    const birthdayVideos = videos.filter((v) =>
+      v.categories?.includes("Birthday")
+    );
+    if (birthdayVideos.length === 0) return;
+
+    const shuffled = shuffleVideos(birthdayVideos);
     setPlaylist(shuffled);
     setPlaylistIndex(0);
     setPlaylistActive(true);
@@ -599,6 +617,25 @@ export default function Gallery() {
                     ▶ Play All Videos
                   </button>
 
+                  {(() => {
+                    const recentBirthday = videos.filter((v) =>
+                      v.categories?.includes("Birthday") &&
+                      new Date(v.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+                    );
+                    return recentBirthday.length > 0 ? (
+                      <button
+                        onClick={handlePlayBirthday}
+                        className="relative rounded-full bg-gradient-to-r from-yellow-400 to-pink-400 px-5 py-3 text-2xl shadow-lg transition hover:scale-[1.02]"
+                        title="Birthday Videos"
+                      >
+                        🎂
+                        <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-pink-600 shadow">
+                          {recentBirthday.length}
+                        </span>
+                      </button>
+                    ) : null;
+                  })()}
+
                   <button
                     onClick={() => setFiltersOpen(true)}
                     className="w-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-3 text-lg font-bold text-white shadow-lg transition hover:scale-[1.02] sm:w-auto md:px-8 md:py-4 md:text-xl"
@@ -607,7 +644,7 @@ export default function Gallery() {
                   </button>
                 </div>
 
-                <div className="mt-8 flex justify-center">
+                {/* <div className="mt-8 flex justify-center">
                   <button
                     onClick={startRandomVibe}
                     className="flex items-center justify-center gap-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 text-lg font-bold text-white shadow-lg transition hover:scale-[1.02] md:px-8 md:py-4 md:text-xl"
@@ -619,7 +656,7 @@ export default function Gallery() {
                     />
                     Let Doddy Pick the Reels!
                   </button>
-                </div>
+                </div> */}
               </div>
             </section>
 

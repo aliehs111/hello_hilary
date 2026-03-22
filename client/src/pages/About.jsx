@@ -81,8 +81,8 @@ export default function About() {
               a difference in Hilary's life by adding thoughtful and
               entertaining videos for her to watch. Even if you haven't seen her
               in a while, she still has fond memories of you! And with just a
-              simple “hello” can brighten her day. Please drop in whenever you
-              can — your messages will truly make a difference! 💕
+              simple “hello” you can brighten her day. Please drop in whenever
+              you can — your messages will truly make a difference! 💕
             </p>
 
             <p className="text-xl text-gray-700 leading-relaxed">
