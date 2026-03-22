@@ -23,7 +23,7 @@ export default function Home() {
     <main className="relative min-h-screen overflow-hidden bg-gradient-to-b from-pink-50 to-blue-50 px-6 pb-6">
       <FallingHeartsOverlay count={16} />
 
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-4xl flex-col items-center justify-start pt-2 text-center sm:justify-center sm:pt-0">
+      <div className="relative z-10 mx-auto flex min-h-screen max-w-4xl flex-col items-center justify-start pt-8 text-center sm:justify-center sm:pt-0">
         <img
           src={hilaryPhoto}
           alt="Hilary smiling"

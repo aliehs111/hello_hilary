@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Pagination, Autoplay } from "swiper/modules";
+import { Pagination, Autoplay, EffectCoverflow } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
+import "swiper/css/effect-coverflow";
 import PhotoLightbox from "@/components/PhotoLightbox";
 import PermissionModal from "@/components/PermissionModal";
 
@@ -291,13 +292,12 @@ export default function Hilary() {
           </section>
         )}
         {/* Go to photos */}
-        <div className="mb-10 flex justify-center">
+        <div className="mb-6 flex justify-end">
           <a
             href="#photos"
-            className="inline-flex items-center gap-2 rounded-full border border-pink-200 bg-white/90 px-4 py-2 text-sm font-semibold text-pink-700 shadow-sm transition hover:bg-pink-50"
+            className="text-sm text-pink-400 hover:text-pink-600 transition"
           >
-            Go to Photos
-            <span aria-hidden="true">↓</span>
+            Photos ↓
           </a>
         </div>
 
@@ -317,23 +317,40 @@ export default function Hilary() {
           <>
             <section className="mb-16">
               {regularVideos.length > 0 ? (
-                <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                <Swiper
+                  effect="coverflow"
+                  grabCursor={true}
+                  centeredSlides={true}
+                  initialSlide={Math.floor(regularVideos.length / 2)}
+                  slidesPerView="auto"
+                  coverflowEffect={{
+                    rotate: 40,
+                    stretch: 0,
+                    depth: 120,
+                    modifier: 1,
+                    slideShadows: true,
+                  }}
+                  pagination={{ clickable: true }}
+                  modules={[EffectCoverflow, Pagination]}
+                  className="pb-10"
+                >
                   {regularVideos.map((v) => (
-                    <VideoCard
-                      key={v.id}
-                      video={v}
-                      thumbnailUrl={videoThumbUrls[v.id]}
-                      onPlay={() =>
-                        playVideo(
-                          v.playback_key || v.original_key,
-                          v.title,
-                          videoThumbUrls[v.id] || "",
-                        )
-                      }
-                      onDelete={handleDeleteVideo}
-                    />
+                    <SwiperSlide key={v.id} style={{ width: "280px" }}>
+                      <VideoCard
+                        video={v}
+                        thumbnailUrl={videoThumbUrls[v.id]}
+                        onPlay={() =>
+                          playVideo(
+                            v.playback_key || v.original_key,
+                            v.title,
+                            videoThumbUrls[v.id] || "",
+                          )
+                        }
+                        onDelete={handleDeleteVideo}
+                      />
+                    </SwiperSlide>
                   ))}
-                </div>
+                </Swiper>
               ) : (
                 <div className="rounded-3xl bg-white/75 p-12 text-center shadow-lg backdrop-blur-sm">
                   <p className="text-xl text-gray-600">
