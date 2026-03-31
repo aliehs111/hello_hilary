@@ -17,9 +17,19 @@ export default function VideoPlayerModal({
 }) {
   const videoRef = useRef(null);
   const [isPaused, setIsPaused] = useState(false);
+  const stalledTimer = useRef(null);
+
+  const clearStalledTimer = () => {
+    if (stalledTimer.current) {
+      clearTimeout(stalledTimer.current);
+      stalledTimer.current = null;
+    }
+  };
 
   useEffect(() => {
     setIsPaused(false);
+    clearStalledTimer();
+    return () => clearStalledTimer();
   }, [url]);
 
   if (!isOpen) return null;
@@ -92,6 +102,17 @@ export default function VideoPlayerModal({
             preload="auto"
             onLoadedData={onLoadedData}
             onEnded={onEnded}
+            onPlaying={clearStalledTimer}
+            onStalled={() => {
+              clearStalledTimer();
+              stalledTimer.current = setTimeout(() => {
+                if (onNext) onNext();
+              }, 7000);
+            }}
+            onError={() => {
+              clearStalledTimer();
+              if (onNext) setTimeout(onNext, 1500);
+            }}
             className={`w-full max-h-[74vh] bg-black object-contain transition-opacity duration-200 ${
               videoLoading ? "opacity-0" : "opacity-100"
             }`}

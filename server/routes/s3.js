@@ -107,7 +107,7 @@ router.get("/presign-download", requireAuth, async (req, res) => {
       Key: key,
     });
 
-    const url = await getSignedUrl(s3, command, { expiresIn: 60 * 10 }); // 10 min
+    const url = await getSignedUrl(s3, command, { expiresIn: 60 * 60 * 2 }); // 2 hours
 
     await db.query(
       `INSERT INTO activity_logs (id, user_id, event_type, metadata, ip_address)
