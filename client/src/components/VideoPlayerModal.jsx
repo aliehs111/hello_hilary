@@ -17,19 +17,44 @@ export default function VideoPlayerModal({
 }) {
   const videoRef = useRef(null);
   const [isPaused, setIsPaused] = useState(false);
-  const stalledTimer = useRef(null);
+  const heartbeatRef = useRef(null);
+  const lastTimeRef = useRef(null);
+  const recoveryAttempted = useRef(false);
 
-  const clearStalledTimer = () => {
-    if (stalledTimer.current) {
-      clearTimeout(stalledTimer.current);
-      stalledTimer.current = null;
+  const clearHeartbeat = () => {
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current);
+      heartbeatRef.current = null;
     }
+  };
+
+  const startHeartbeat = () => {
+    clearHeartbeat();
+    lastTimeRef.current = null;
+    recoveryAttempted.current = false;
+    heartbeatRef.current = setInterval(() => {
+      const video = videoRef.current;
+      if (!video || video.paused || video.ended) return;
+      if (lastTimeRef.current !== null && video.currentTime === lastTimeRef.current) {
+        if (!recoveryAttempted.current) {
+          recoveryAttempted.current = true;
+          video.pause();
+          video.play().catch(() => {});
+        } else {
+          clearHeartbeat();
+          if (onNext) onNext();
+        }
+      } else {
+        recoveryAttempted.current = false;
+      }
+      lastTimeRef.current = video.currentTime;
+    }, 5000);
   };
 
   useEffect(() => {
     setIsPaused(false);
-    clearStalledTimer();
-    return () => clearStalledTimer();
+    clearHeartbeat();
+    return () => clearHeartbeat();
   }, [url]);
 
   if (!isOpen) return null;
@@ -102,15 +127,10 @@ export default function VideoPlayerModal({
             preload="auto"
             onLoadedData={onLoadedData}
             onEnded={onEnded}
-            onPlaying={clearStalledTimer}
-            onWaiting={() => {
-              clearStalledTimer();
-              stalledTimer.current = setTimeout(() => {
-                if (onNext) onNext();
-              }, 15000);
-            }}
+            onPlaying={startHeartbeat}
+            onPause={clearHeartbeat}
             onError={() => {
-              clearStalledTimer();
+              clearHeartbeat();
               if (onNext) setTimeout(onNext, 1500);
             }}
             className={`w-full max-h-[74vh] bg-black object-contain transition-opacity duration-200 ${
