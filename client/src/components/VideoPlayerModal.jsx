@@ -103,11 +103,11 @@ export default function VideoPlayerModal({
             onLoadedData={onLoadedData}
             onEnded={onEnded}
             onPlaying={clearStalledTimer}
-            onStalled={() => {
+            onWaiting={() => {
               clearStalledTimer();
               stalledTimer.current = setTimeout(() => {
                 if (onNext) onNext();
-              }, 7000);
+              }, 15000);
             }}
             onError={() => {
               clearStalledTimer();
