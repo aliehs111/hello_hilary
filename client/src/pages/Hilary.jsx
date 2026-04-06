@@ -28,6 +28,7 @@ export default function Hilary() {
 
   const [playerOpen, setPlayerOpen] = useState(false);
   const [playerUrl, setPlayerUrl] = useState("");
+  const [playerHlsUrl, setPlayerHlsUrl] = useState("");
   const [playerTitle, setPlayerTitle] = useState("");
   const [videoLoading, setVideoLoading] = useState(false);
   const [playerPoster, setPlayerPoster] = useState("");
@@ -138,9 +139,10 @@ export default function Hilary() {
     [videos],
   );
 
-  const playVideo = async (key, title, poster = "") => {
+  const playVideo = async (key, title, poster = "", hlsUrl = "") => {
     try {
       setVideoLoading(true);
+      setPlayerHlsUrl(hlsUrl || "");
       const res = await fetch(
         `/api/s3/presign-download?key=${encodeURIComponent(key)}`,
         { credentials: "include" },
@@ -161,6 +163,7 @@ export default function Hilary() {
   const closePlayer = () => {
     setPlayerOpen(false);
     setPlayerUrl("");
+    setPlayerHlsUrl("");
     setPlayerTitle("");
     setPlayerPoster("");
     setVideoLoading(false);
@@ -270,6 +273,7 @@ export default function Hilary() {
                       video.playback_key || video.original_key,
                       video.title,
                       videoThumbUrls[video.id] || "",
+                      video.hls_url || "",
                     )
                   }
                   className="group relative w-64 flex-shrink-0 overflow-hidden rounded-2xl shadow-md transition-all duration-300 hover:shadow-pink-200 hover:shadow-xl hover:scale-[1.02] sm:w-72"
@@ -344,6 +348,7 @@ export default function Hilary() {
                             v.playback_key || v.original_key,
                             v.title,
                             videoThumbUrls[v.id] || "",
+                            v.hls_url || "",
                           )
                         }
                         onDelete={handleDeleteVideo}
@@ -510,6 +515,7 @@ export default function Hilary() {
           isOpen={playerOpen}
           title={playerTitle}
           url={playerUrl}
+          hlsUrl={playerHlsUrl}
           poster={playerPoster}
           videoLoading={videoLoading}
           onClose={closePlayer}

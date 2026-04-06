@@ -44,6 +44,7 @@ router.get("/", requireAuth, async (req, res) => {
         m.is_featured,
         m.is_hidden,
         m.error_message,
+        m.hls_key,
         m.created_at,
         m.updated_at
       FROM media m
@@ -99,7 +100,17 @@ router.get("/", requireAuth, async (req, res) => {
     // query += ` ORDER BY m.created_at DESC LIMIT 1`;
 
     const result = await db.query(query, values);
-    res.json({ media: result.rows });
+
+    const bucket = process.env.S3_BUCKET;
+    const region = process.env.AWS_REGION;
+    const rows = result.rows.map((row) => ({
+      ...row,
+      hls_url: row.hls_key
+        ? `https://${bucket}.s3.${region}.amazonaws.com/${row.hls_key}`
+        : null,
+    }));
+
+    res.json({ media: rows });
   } catch (err) {
     console.error("[GET /api/media] error:", err);
     res.status(500).json({ error: "Failed to fetch media" });
@@ -170,7 +181,7 @@ router.post("/complete", requireAuth, async (req, res) => {
     let processingMessage = "Upload complete";
     if (media_type === "video") {
       try {
-        const { jobId, playbackKey, thumbnailKey } =
+        const { jobId, playbackKey, thumbnailKey, hlsManifestKey } =
           await createMediaConvertJob({
             mediaId,
             originalKey: original_key,
@@ -182,6 +193,7 @@ router.post("/complete", requireAuth, async (req, res) => {
           jobId,
           playbackKey,
           thumbnailKey,
+          hlsManifestKey,
           maxAttempts: 120, // ~20 min timeout
           delayMs: 10000,
         }).catch((err) => {

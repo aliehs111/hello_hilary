@@ -57,6 +57,7 @@ export default function Gallery() {
 
   const [playerOpen, setPlayerOpen] = useState(false);
   const [playerUrl, setPlayerUrl] = useState("");
+  const [playerHlsUrl, setPlayerHlsUrl] = useState("");
   const [playerTitle, setPlayerTitle] = useState("");
   const [playerPoster, setPlayerPoster] = useState("");
   const [videoLoading, setVideoLoading] = useState(false);
@@ -337,15 +338,17 @@ export default function Gallery() {
   const closePlayer = () => {
     setPlayerOpen(false);
     setPlayerUrl("");
+    setPlayerHlsUrl("");
     setPlayerTitle("");
     setPlayerPoster("");
     setVideoLoading(false);
     setPlaylistActive(false);
   };
 
-  const playVideo = async (key, title, poster = "") => {
+  const playVideo = async (key, title, poster = "", hlsUrl = "") => {
     try {
       setVideoLoading(true);
+      setPlayerHlsUrl(hlsUrl || "");
       const res = await fetch(
         `/api/s3/presign-download?key=${encodeURIComponent(key)}`,
         { credentials: "include" },
@@ -372,6 +375,7 @@ export default function Gallery() {
       current.playback_key || current.original_key,
       current.title,
       videoThumbUrls[current.id] || "",
+      current.hls_url || "",
     );
   }, [playlistActive, playlist, playlistIndex, videoThumbUrls]);
 
@@ -726,6 +730,7 @@ export default function Gallery() {
                         v.playback_key || v.original_key,
                         v.title,
                         videoThumbUrls[v.id] || "",
+                        v.hls_url || "",
                       )
                     }
                     onDelete={handleDeleteVideo}
@@ -920,6 +925,7 @@ export default function Gallery() {
           isOpen={playerOpen}
           title={playerTitle}
           url={playerUrl}
+          hlsUrl={playerHlsUrl}
           poster={playerPoster}
           videoLoading={videoLoading}
           playlistActive={playlistActive}

@@ -68,12 +68,15 @@ async function createMediaConvertJob({ mediaId, originalKey }) {
 
   const playbackKey = `processed/video/${base}_mp4.mp4`;
   const thumbnailKey = `processed/video/${base}_poster.0000000.jpg`;
+  const hlsManifestKey = `processed/video/${base}/hls/${base}.m3u8`;
 
   console.log(`[CREATE JOB] media ${mediaId} | input: ${inputS3}`);
   console.log(`  expected playback: ${playbackKey}`);
   console.log(`  expected thumbnail: ${thumbnailKey}`);
+  console.log(`  expected HLS manifest: ${hlsManifestKey}`);
 
   const destination = `s3://${bucket}/processed/video/${base}`;
+  const hlsDestination = `s3://${bucket}/processed/video/${base}/hls/`;
 
   const command = new CreateJobCommand({
     Role: roleArn,
@@ -157,6 +160,51 @@ async function createMediaConvertJob({ mediaId, originalKey }) {
             },
           ],
         },
+        {
+          Name: "Apple HLS",
+          OutputGroupSettings: {
+            Type: "HLS_GROUP_SETTINGS",
+            HlsGroupSettings: {
+              Destination: hlsDestination,
+              SegmentLength: 6,
+              MinSegmentLength: 0,
+            },
+          },
+          Outputs: [
+            {
+              NameModifier: "index",
+              ContainerSettings: {
+                Container: "M3U8",
+                M3u8Settings: {},
+              },
+              VideoDescription: {
+                CodecSettings: {
+                  Codec: "H_264",
+                  H264Settings: {
+                    RateControlMode: "QVBR",
+                    SceneChangeDetect: "TRANSITION_DETECTION",
+                    MaxBitrate: 3000000,
+                    QvbrSettings: {
+                      QvbrQualityLevel: 7,
+                    },
+                  },
+                },
+              },
+              AudioDescriptions: [
+                {
+                  CodecSettings: {
+                    Codec: "AAC",
+                    AacSettings: {
+                      Bitrate: 96000,
+                      CodingMode: "CODING_MODE_2_0",
+                      SampleRate: 48000,
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        },
       ],
     },
     StatusUpdateInterval: "SECONDS_10",
@@ -166,17 +214,18 @@ async function createMediaConvertJob({ mediaId, originalKey }) {
     const resp = await mediaConvert.send(command);
     const jobId = resp.Job?.Id;
     console.log(`[JOB CREATED] ${jobId}`);
-    return { jobId, playbackKey, thumbnailKey };
+    return { jobId, playbackKey, thumbnailKey, hlsManifestKey };
   } catch (err) {
     console.error("[CREATE JOB ERROR]", err.message || err);
     throw err;
   }
 }
 
-async function markProcessed(mediaId, playbackKey, thumbnailKey) {
+async function markProcessed(mediaId, playbackKey, thumbnailKey, hlsKey) {
   console.log(`[DB PROCESSED] media ${mediaId}`);
   console.log(`  playback_key = ${playbackKey}`);
   console.log(`  thumbnail_key = ${thumbnailKey}`);
+  console.log(`  hls_key = ${hlsKey || "none"}`);
 
   await db.query(
     `
@@ -184,12 +233,13 @@ async function markProcessed(mediaId, playbackKey, thumbnailKey) {
     SET
       playback_key = $1,
       thumbnail_key = $2,
+      hls_key = $3,
       status = 'ready',
       error_message = NULL,
       updated_at = now()
-    WHERE id = $3
+    WHERE id = $4
     `,
-    [playbackKey, thumbnailKey, mediaId],
+    [playbackKey, thumbnailKey, hlsKey || null, mediaId],
   );
 }
 
@@ -214,6 +264,7 @@ async function watchMediaConvertJob({
   jobId,
   playbackKey,
   thumbnailKey,
+  hlsManifestKey,
   maxAttempts = 180,
   delayMs = 10000,
 }) {
@@ -228,10 +279,17 @@ async function watchMediaConvertJob({
       if (status === "COMPLETE") {
         const playbackExists = await objectExists(playbackKey);
         const thumbExists = await objectExists(thumbnailKey);
+        const hlsExists = hlsManifestKey ? await objectExists(hlsManifestKey) : false;
+
+        if (hlsExists) {
+          console.log("[WATCHER] HLS manifest found");
+        } else if (hlsManifestKey) {
+          console.warn("[WATCHER] HLS manifest not found — will save without HLS");
+        }
 
         if (playbackExists && thumbExists) {
-          await markProcessed(mediaId, playbackKey, thumbnailKey);
-          console.log("[WATCHER] SUCCESS - both files exist");
+          await markProcessed(mediaId, playbackKey, thumbnailKey, hlsExists ? hlsManifestKey : null);
+          console.log("[WATCHER] SUCCESS - MP4 and thumbnail exist");
         } else {
           const msg = `COMPLETE but files missing (playback: ${playbackExists}, thumb: ${thumbExists})`;
           console.error(`[WATCHER] ${msg}`);

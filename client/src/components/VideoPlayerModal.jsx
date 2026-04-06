@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import Hls from "hls.js";
 
 export default function VideoPlayerModal({
   isOpen,
   title,
   url,
+  hlsUrl,
   poster,
   videoLoading,
   playlistActive = false,
@@ -20,6 +22,7 @@ export default function VideoPlayerModal({
   const heartbeatRef = useRef(null);
   const lastTimeRef = useRef(null);
   const recoveryAttempted = useRef(false);
+  const hlsRef = useRef(null);
 
   const clearHeartbeat = () => {
     if (heartbeatRef.current) {
@@ -51,11 +54,46 @@ export default function VideoPlayerModal({
     }, 5000);
   };
 
+  // Set up video source (HLS or MP4) whenever the URL changes
   useEffect(() => {
     setIsPaused(false);
     clearHeartbeat();
-    return () => clearHeartbeat();
-  }, [url]);
+
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+
+    if (hlsUrl) {
+      if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        // Safari: native HLS support
+        video.src = hlsUrl;
+      } else if (Hls.isSupported()) {
+        // Chrome, Firefox, Android: use hls.js
+        const hls = new Hls({ startLevel: -1 });
+        hlsRef.current = hls;
+        hls.loadSource(hlsUrl);
+        hls.attachMedia(video);
+      } else {
+        // No HLS support — fall back to MP4
+        video.src = url;
+      }
+    } else {
+      // No HLS available for this video (uploaded before HLS) — use MP4
+      video.src = url;
+    }
+
+    return () => {
+      clearHeartbeat();
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
+  }, [hlsUrl, url]);
 
   if (!isOpen) return null;
 
@@ -118,8 +156,7 @@ export default function VideoPlayerModal({
 
           <video
             ref={videoRef}
-            key={url}
-            src={url}
+            key={hlsUrl || url}
             poster={poster}
             controls={false}
             autoPlay
